@@ -15,6 +15,25 @@ A fork of the official [Laravel React starter kit](https://laravel.com/docs/star
 - Node 20+
 - A database supported by Laravel (SQLite works for local dev)
 
+## Adding a locale
+
+Strings that only exist in this fork's React UI (login/2FA/profile screens, etc.) aren't part of the upstream `laravel-lang/starter-kits` package, so they're layered on top of it via `lang/vendor-patches/`:
+
+- `lang/vendor-patches/source/react.json` — the English source strings this fork adds on top of the upstream `react.json`.
+- `lang/vendor-patches/locales/{locale}.json` — translations of those strings for one locale. See `lang/vendor-patches/locales/ja.json` for a complete example.
+
+To add a new locale (e.g. `ko`):
+
+1. If your components use custom strings not already listed in `lang/vendor-patches/source/react.json`, add them there first (English key/value pairs).
+2. Create `lang/vendor-patches/locales/ko.json` and translate every key from `source/react.json`, following the same structure as `lang/vendor-patches/locales/ja.json`. A key can be left out only if upstream already ships a translation for it in that locale (`ja.json` skips `"Warning"` for this reason) — when in doubt, translate it anyway; the patch just overrides the upstream value.
+3. Merge the patches into the vendor package and regenerate the translation files:
+   ```bash
+   composer patch-vendor
+   php artisan lang:update
+   ```
+
+`composer patch-vendor` (`scripts/patch-vendor.php`) merges everything under `lang/vendor-patches/source/` and `lang/vendor-patches/locales/` into the matching files inside `vendor/laravel-lang/starter-kits/`, taking your patch values over the upstream ones. `lang:update` then regenerates `lang/{locale}.json` and `lang/{locale}/*.php` for every locale it finds. `patch-vendor` also runs automatically after `composer install`/`composer update`, and `lang:update` runs automatically after `composer update` — but for a newly added locale, run both explicitly so the new locale is generated immediately.
+
 ## Installation
 
 ```bash
@@ -48,21 +67,6 @@ Starts four processes concurrently:
 | Queue worker | `php artisan queue:listen` |
 | Log viewer | `php artisan pail` |
 | Vite dev server | `npm run dev` |
-
-## Adding a locale
-
-1. Create an empty patch file:
-   ```bash
-   echo '{}' > lang/vendor-patches/locales/ko.json
-   ```
-2. Regenerate translation files:
-   ```bash
-   php artisan lang:update
-   ```
-
-That's it. The new locale is now available to the application.
-
-The `lang/vendor-patches/locales/` directory is the install trigger — `lang:update` scans `lang/` recursively for JSON files to determine which locales to generate. 
 
 ## Architecture
 
