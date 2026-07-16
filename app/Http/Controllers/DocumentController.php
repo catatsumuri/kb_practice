@@ -4,15 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DocumentController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): Response
     {
-        //
+        $documents = Document::latest()->get();
+
+        return Inertia::render('documents', [
+            'documents' => $documents,
+        ]);
     }
 
     /**
