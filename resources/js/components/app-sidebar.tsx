@@ -13,7 +13,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard, documents } from '@/routes';
+import { dashboard } from '@/routes';
+import { index as documents } from '@/routes/documents';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [

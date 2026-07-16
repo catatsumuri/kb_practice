@@ -40,7 +40,8 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
-import { dashboard, documents } from '@/routes';
+import { dashboard } from '@/routes';
+import { index as documents } from '@/routes/documents';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {

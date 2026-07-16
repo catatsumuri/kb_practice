@@ -7,7 +7,7 @@ Route::inertia('/', 'welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
-    Route::get('documents', [DocumentController::class, 'index'])->name('documents');
+    Route::resource('documents', DocumentController::class);
 });
 
 require __DIR__.'/settings.php';

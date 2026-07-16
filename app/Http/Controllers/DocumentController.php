@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -24,17 +25,29 @@ class DocumentController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(): Response
     {
-        //
+        return Inertia::render('documents/create');
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
-        //
+        $validated = $request->validate([
+            'title' => ['required'],
+            'content' => ['required'],
+        ]);
+
+        Document::create($validated);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ドキュメントを作成しました',
+        ]);
+
+        return to_route('documents.index');
     }
 
     /**

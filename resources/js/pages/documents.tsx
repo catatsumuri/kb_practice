@@ -1,5 +1,16 @@
-import { Head, setLayoutProps } from '@inertiajs/react';
-import { documents } from '@/routes';
+import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import {
+    create,
+    index,
+} from '@/actions/App/Http/Controllers/DocumentController';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 
 type Document = {
     id: number;
@@ -24,7 +35,7 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
         breadcrumbs: [
             {
                 title: 'ドキュメント',
-                href: documents(),
+                href: index(),
             },
         ],
     });
@@ -32,16 +43,29 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
     return (
         <>
             <Head title="ドキュメント" />
-            <main>
-                <div>
+            <main className="p-4">
+                <div className="mb-4 flex justify-end">
+                    <Button asChild>
+                        <Link href={create()}>新規記事</Link>
+                    </Button>
+                </div>
+                <div className="grid gap-4">
                     {documentList.map((document) => (
-                        <article key={document.id}>
-                            <h2>{document.title}</h2>
-                            <time dateTime={document.created_at}>
-                                {formatDate(document.created_at)}
-                            </time>
-                            <p>{document.content}</p>
-                        </article>
+                        <Card key={document.id}>
+                            <CardHeader>
+                                <CardTitle>{document.title}</CardTitle>
+                                <CardDescription>
+                                    <time dateTime={document.created_at}>
+                                        {formatDate(document.created_at)}
+                                    </time>
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="whitespace-pre-wrap">
+                                    {document.content}
+                                </p>
+                            </CardContent>
+                        </Card>
                     ))}
                 </div>
             </main>
