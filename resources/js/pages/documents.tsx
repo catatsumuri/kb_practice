@@ -3,6 +3,7 @@ import {
     create,
     index,
 } from '@/actions/App/Http/Controllers/DocumentController';
+import { MarkdownContent } from '@/components/markdown-content';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -61,9 +62,9 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <p className="whitespace-pre-wrap">
+                                <MarkdownContent>
                                     {document.content}
-                                </p>
+                                </MarkdownContent>
                             </CardContent>
                         </Card>
                     ))}
