@@ -15,9 +15,12 @@ class DocumentController extends Controller
      */
     public function index(): Response
     {
-        $documents = Document::latest()->get();
+        $documents = Document::query()
+            ->select(['id', 'title', 'created_at'])
+            ->latest()
+            ->get();
 
-        return Inertia::render('documents', [
+        return Inertia::render('documents/index', [
             'documents' => $documents,
         ]);
     }
@@ -36,8 +39,8 @@ class DocumentController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title' => ['required'],
-            'content' => ['required'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
         ]);
 
         Document::create($validated);
@@ -53,32 +56,55 @@ class DocumentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Document $document)
+    public function show(Document $document): Response
     {
-        //
+        return Inertia::render('documents/show', [
+            'document' => $document,
+        ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Document $document)
+    public function edit(Document $document): Response
     {
-        //
+        return Inertia::render('documents/edit', [
+            'document' => $document,
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Document $document)
+    public function update(Request $request, Document $document): RedirectResponse
     {
-        //
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+        ]);
+
+        $document->update($validated);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ドキュメントを更新しました',
+        ]);
+
+        return to_route('documents.show', $document);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Document $document)
+    public function destroy(Document $document): RedirectResponse
     {
-        //
+        $document->delete();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ドキュメントを削除しました',
+        ]);
+
+        return to_route('documents.index');
     }
 }

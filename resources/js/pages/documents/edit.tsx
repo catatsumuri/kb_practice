@@ -1,5 +1,10 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { store } from '@/actions/App/Http/Controllers/DocumentController';
+import {
+    edit,
+    index,
+    show,
+    update,
+} from '@/actions/App/Http/Controllers/DocumentController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,9 +17,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { create, index } from '@/routes/documents';
 
-export default function CreateDocument() {
+type Document = {
+    id: number;
+    title: string;
+    content: string;
+};
+
+type EditDocumentProps = {
+    document: Document;
+};
+
+export default function EditDocument({ document }: EditDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -22,26 +36,33 @@ export default function CreateDocument() {
                 href: index(),
             },
             {
-                title: '新規作成',
-                href: create(),
+                title: document.title,
+                href: show(document.id),
+            },
+            {
+                title: '編集',
+                href: edit(document.id),
             },
         ],
     });
 
     return (
         <>
-            <Head title="記事の新規作成" />
+            <Head title={`${document.title}を編集`} />
 
             <main className="p-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>記事の新規作成</CardTitle>
+                        <CardTitle>記事の編集</CardTitle>
                         <CardDescription>
-                            タイトルとMarkdown形式の本文を入力してください。
+                            タイトルとMarkdown形式の本文を編集できます。
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Form {...store.form()} className="grid gap-6">
+                        <Form
+                            {...update.form(document.id)}
+                            className="grid gap-6"
+                        >
                             {({ errors, processing }) => (
                                 <>
                                     <div className="grid gap-2">
@@ -49,6 +70,7 @@ export default function CreateDocument() {
                                         <Input
                                             id="title"
                                             name="title"
+                                            defaultValue={document.title}
                                             aria-invalid={Boolean(errors.title)}
                                             autoFocus
                                         />
@@ -62,6 +84,7 @@ export default function CreateDocument() {
                                         <Textarea
                                             id="content"
                                             name="content"
+                                            defaultValue={document.content}
                                             aria-describedby="content-help"
                                             aria-invalid={Boolean(
                                                 errors.content,
@@ -79,7 +102,7 @@ export default function CreateDocument() {
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button variant="outline" asChild>
-                                            <Link href={index()}>
+                                            <Link href={show(document.id)}>
                                                 キャンセル
                                             </Link>
                                         </Button>
@@ -87,7 +110,7 @@ export default function CreateDocument() {
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            {processing ? '保存中…' : '保存'}
+                                            {processing ? '保存中…' : '更新'}
                                         </Button>
                                     </div>
                                 </>
