@@ -29,6 +29,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
+        "@catatsumuri/inkstream2": "file:inkstream2",
         "@erag/lang-sync-inertia": "^3.0.0",
         "@inertiajs/react": "^3.0.0",
         "@inertiajs/vite": "^3.0.0",

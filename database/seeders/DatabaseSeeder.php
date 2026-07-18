@@ -32,5 +32,10 @@ class DatabaseSeeder extends Seeder
             'title' => 'Markdownでドキュメントを書く',
             'content' => File::get(database_path('seeders/sample-document.md')),
         ]);
+
+        Document::factory()->for($testUser)->create([
+            'title' => 'Mintlifyコンポーネント記法 (inkstream2)',
+            'content' => File::get(database_path('seeders/sample-document-mintlify.md')),
+        ]);
     }
 }

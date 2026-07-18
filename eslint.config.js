@@ -106,6 +106,8 @@ export default [
         ignores: [
             'vendor',
             'node_modules',
+            'inkstream',
+            'inkstream2',
             'public',
             'bootstrap/ssr',
             'tailwind.config.js',

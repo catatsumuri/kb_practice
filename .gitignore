@@ -1,4 +1,6 @@
 /.phpunit.cache
+/inkstream
+/inkstream2
 /bootstrap/ssr
 /node_modules
 /public/build
