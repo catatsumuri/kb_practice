@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,9 +14,11 @@ class DocumentController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $documents = Document::query()
+        Gate::authorize('viewAny', Document::class);
+
+        $documents = $request->user()->documents()
             ->select(['id', 'user_id', 'title', 'created_at'])
             ->with('user:id,name')
             ->latest()
@@ -31,6 +34,8 @@ class DocumentController extends Controller
      */
     public function create(): Response
     {
+        Gate::authorize('create', Document::class);
+
         return Inertia::render('documents/create');
     }
 
@@ -39,12 +44,14 @@ class DocumentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        Gate::authorize('create', Document::class);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
         ]);
 
-        Document::create($validated);
+        $request->user()->documents()->create($validated);
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -59,6 +66,8 @@ class DocumentController extends Controller
      */
     public function show(Document $document): Response
     {
+        Gate::authorize('view', $document);
+
         $document->load('user:id,name');
 
         return Inertia::render('documents/show', [
@@ -71,6 +80,8 @@ class DocumentController extends Controller
      */
     public function edit(Document $document): Response
     {
+        Gate::authorize('update', $document);
+
         return Inertia::render('documents/edit', [
             'document' => $document,
         ]);
@@ -81,6 +92,8 @@ class DocumentController extends Controller
      */
     public function update(Request $request, Document $document): RedirectResponse
     {
+        Gate::authorize('update', $document);
+
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
@@ -101,6 +114,8 @@ class DocumentController extends Controller
      */
     public function destroy(Document $document): RedirectResponse
     {
+        Gate::authorize('delete', $document);
+
         $document->delete();
 
         Inertia::flash('toast', [
