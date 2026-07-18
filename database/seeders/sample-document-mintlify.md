@@ -88,6 +88,18 @@ _title: golden corpus 一致状況
 差分: 6
 ```
 
+## ネイティブディレクティブ (:::message / :::details)
+
+Mintlify タグとは別に、Zenn 記法の `:::` ディレクティブを直接書くこともできます。
+
+:::message alert
+これはコロンフェンス記法で直接書いた警告メッセージです。Mintlify の `<Warning>` タグと同じ `aside.msg` コンポーネントで描画されます。
+:::
+
+:::details 詳しい仕組み
+これは remark-directive が要求する `[label]` 形式へ、行頭のショートハンドを正規化してから解釈されます。
+:::
+
 ## エラー耐性
 
 閉じ忘れたタグは親の終端で自動クローズされ、警告が vfile に記録されます。
