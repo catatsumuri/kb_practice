@@ -29,8 +29,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $documents = [
-            'Markdownでドキュメントを書く' => 'sample-document.md',
-            'Mintlifyコンポーネント記法 (inkstream2)' => 'sample-document-mintlify.md',
             'Markdown Syntax Guide' => 'syntax-guide-index.md',
             'Extended Markdown Syntax' => 'syntax-guide-extended.md',
             'Zenn Syntax' => 'syntax-guide-zenn.md',
