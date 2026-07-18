@@ -62,6 +62,32 @@ npm install
 
 これは <Badge color="green">New</Badge> なバッジと <Tooltip tip="Abstract Syntax Tree">AST</Tooltip> という用語です。文中の他のテキストを崩さずにペアリングされます。
 
+## コードフェンス変換 (tree/quiz/chart)
+
+```tree
+.
+├── src
+│   ├── index.ts
+│   └── lib
+│       └── a.ts
+└── package.json
+```
+
+```quiz
+question: inkstream2 のタグペアリングはどのデータ構造の上で動く?
+A: 文字列の正規表現置換
+B: mdast (Markdown AST)
+C: DOM
+correct: B
+explanation: v1 は文字列前処理でしたが、v2 は remark が作る mdast ツリーの上で直接タグをペアリングします。
+```
+
+```chart:bar
+_title: golden corpus 一致状況
+一致: 3
+差分: 6
+```
+
 ## エラー耐性
 
 閉じ忘れたタグは親の終端で自動クローズされ、警告が vfile に記録されます。

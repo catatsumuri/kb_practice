@@ -5,7 +5,13 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import {
     normalizeMintlifyBlocks,
+    remarkCodeFenceComponents,
     remarkMintlifyTags,
+} from '@catatsumuri/inkstream2';
+import type {
+    ChartConfig,
+    QuizContent,
+    TreeNode,
 } from '@catatsumuri/inkstream2';
 
 type MarkdownContentProps = {
@@ -19,6 +25,9 @@ type MintlifyElementProps = {
     href?: string;
     color?: string;
     tip?: string;
+    tree?: string;
+    quiz?: string;
+    chart?: string;
 };
 
 const CALLOUT_VARIANT_CLASSES: Record<string, string> = {
@@ -36,10 +45,42 @@ const BADGE_COLOR_CLASSES: Record<string, string> = {
     yellow: 'bg-amber-500/10 text-amber-600',
 };
 
+function parseJsonProp<T>(value: string | undefined): T | null {
+    if (!value) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(value) as T;
+    } catch {
+        return null;
+    }
+}
+
+function TreeNodeItem({ node }: { node: TreeNode }) {
+    if (node.type === 'file') {
+        return <li className="pl-4">📄 {node.name}</li>;
+    }
+
+    return (
+        <li>
+            <details open={node.defaultOpen}>
+                <summary className="cursor-pointer">📁 {node.name}</summary>
+                <ul className="ml-4 border-l border-border pl-2">
+                    {(node.children ?? []).map((child, index) => (
+                        <TreeNodeItem key={index} node={child} />
+                    ))}
+                </ul>
+            </details>
+        </li>
+    );
+}
+
 /**
  * Renderers for the custom elements emitted by inkstream2's
- * remarkMintlifyTags (aside, card, steps, ...). The tag names are not part
- * of react-markdown's Components type, hence the cast at the end.
+ * remarkMintlifyTags (aside, card, steps, ...) and remarkCodeFenceComponents
+ * (tree, quiz, chart). The tag names are not part of react-markdown's
+ * Components type, hence the cast at the end.
  */
 const mintlifyComponents = {
     aside: ({ className, children }: MintlifyElementProps) => {
@@ -122,13 +163,107 @@ const mintlifyComponents = {
             {children}
         </span>
     ),
+    tree: ({ tree }: MintlifyElementProps) => {
+        const nodes = parseJsonProp<TreeNode[]>(tree);
+
+        if (!nodes) {
+            return null;
+        }
+
+        return (
+            <ul className="grid gap-0.5 rounded-lg border border-border p-3 font-mono text-xs">
+                {nodes.map((node, index) => (
+                    <TreeNodeItem key={index} node={node} />
+                ))}
+            </ul>
+        );
+    },
+    quiz: ({ quiz }: MintlifyElementProps) => {
+        const content = parseJsonProp<QuizContent>(quiz);
+
+        if (!content) {
+            return null;
+        }
+
+        return (
+            <div className="grid gap-2 rounded-lg border border-border p-4">
+                <p className="font-semibold">{content.question}</p>
+                <ul className="grid gap-1">
+                    {content.options.map((option) => (
+                        <li
+                            key={option.label}
+                            className={cn(
+                                'rounded border px-2 py-1',
+                                option.label === content.correct
+                                    ? 'border-emerald-500/50 bg-emerald-500/10'
+                                    : 'border-border',
+                            )}
+                        >
+                            <span className="font-medium">{option.label}.</span>{' '}
+                            {option.text}
+                        </li>
+                    ))}
+                </ul>
+                {content.explanation && (
+                    <p className="text-xs text-muted-foreground">
+                        {content.explanation}
+                    </p>
+                )}
+            </div>
+        );
+    },
+    chart: ({ chart }: MintlifyElementProps) => {
+        const config = parseJsonProp<ChartConfig>(chart);
+
+        if (!config) {
+            return null;
+        }
+
+        const min = config.min ?? 0;
+        const max =
+            config.max ?? Math.max(...config.data.map((point) => point.value));
+        const domain = Math.max(max - min, 1);
+
+        return (
+            <div className="grid gap-2 rounded-lg border border-border p-4">
+                {config.title && (
+                    <p className="font-semibold">{config.title}</p>
+                )}
+                <div className="grid gap-1.5">
+                    {config.data.map((point) => (
+                        <div
+                            key={point.label}
+                            className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 text-xs"
+                        >
+                            <span className="truncate">{point.label}</span>
+                            <div className="h-2 rounded bg-muted">
+                                <div
+                                    className="h-2 rounded bg-primary"
+                                    style={{
+                                        width: `${((point.value - min) / domain) * 100}%`,
+                                    }}
+                                />
+                            </div>
+                            <span className="text-right tabular-nums">
+                                {point.value}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    },
 } as unknown as Components;
 
 export function MarkdownContent({ children }: MarkdownContentProps) {
     return (
         <div className="space-y-4 text-sm leading-7 break-words [&_a]:font-medium [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-4 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:text-lg [&_h3]:font-semibold [&_hr]:border-border [&_li]:ml-5 [&_ol]:list-decimal [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-4 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:p-2 [&_th]:text-left [&_ul]:list-disc">
             <Markdown
-                remarkPlugins={[remarkGfm, remarkMintlifyTags]}
+                remarkPlugins={[
+                    remarkGfm,
+                    remarkMintlifyTags,
+                    remarkCodeFenceComponents,
+                ]}
                 components={mintlifyComponents}
             >
                 {normalizeMintlifyBlocks(children)}
