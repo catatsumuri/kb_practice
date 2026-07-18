@@ -23,24 +23,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-
-type Document = {
-    id: number;
-    title: string;
-    content: string;
-    created_at: string;
-};
+import { formatDate } from '@/lib/utils';
+import type { Document } from '@/types';
 
 type ShowDocumentProps = {
     document: Document;
 };
-
-function formatDate(date: string) {
-    return new Intl.DateTimeFormat('ja-JP', {
-        dateStyle: 'long',
-        timeZone: 'Asia/Tokyo',
-    }).format(new Date(date));
-}
 
 export default function ShowDocument({ document }: ShowDocumentProps) {
     setLayoutProps({

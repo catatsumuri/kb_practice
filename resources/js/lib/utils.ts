@@ -10,3 +10,10 @@ export function cn(...inputs: ClassValue[]) {
 export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
     return typeof url === 'string' ? url : url.url;
 }
+
+export function formatDate(date: string): string {
+    return new Intl.DateTimeFormat('ja-JP', {
+        dateStyle: 'long',
+        timeZone: 'Asia/Tokyo',
+    }).format(new Date(date));
+}

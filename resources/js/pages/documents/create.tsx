@@ -1,18 +1,10 @@
-import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { store } from '@/actions/App/Http/Controllers/DocumentController';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
+import { Head, setLayoutProps } from '@inertiajs/react';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { create, index } from '@/routes/documents';
+    create,
+    index,
+    store,
+} from '@/actions/App/Http/Controllers/DocumentController';
+import { DocumentForm } from '@/components/document-form';
 
 export default function CreateDocument() {
     setLayoutProps({
@@ -33,68 +25,13 @@ export default function CreateDocument() {
             <Head title="記事の新規作成" />
 
             <main className="p-4">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>記事の新規作成</CardTitle>
-                        <CardDescription>
-                            タイトルとMarkdown形式の本文を入力してください。
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Form {...store.form()} className="grid gap-6">
-                            {({ errors, processing }) => (
-                                <>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="title">タイトル</Label>
-                                        <Input
-                                            id="title"
-                                            name="title"
-                                            aria-invalid={Boolean(errors.title)}
-                                            autoFocus
-                                        />
-                                        <InputError message={errors.title} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="content">
-                                            本文（Markdown）
-                                        </Label>
-                                        <Textarea
-                                            id="content"
-                                            name="content"
-                                            aria-describedby="content-help"
-                                            aria-invalid={Boolean(
-                                                errors.content,
-                                            )}
-                                            className="min-h-80 resize-y font-mono leading-6"
-                                        />
-                                        <p
-                                            id="content-help"
-                                            className="text-xs text-muted-foreground"
-                                        >
-                                            見出し、リスト、リンク、表、タスクリストなどのMarkdown記法を使用できます。
-                                        </p>
-                                        <InputError message={errors.content} />
-                                    </div>
-
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button variant="outline" asChild>
-                                            <Link href={index()}>
-                                                キャンセル
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            {processing ? '保存中…' : '保存'}
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    </CardContent>
-                </Card>
+                <DocumentForm
+                    title="記事の新規作成"
+                    description="タイトルとMarkdown形式の本文を入力してください。"
+                    form={store.form()}
+                    cancelHref={index()}
+                    submitLabel="保存"
+                />
             </main>
         </>
     );

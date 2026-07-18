@@ -11,23 +11,12 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-
-type Document = {
-    id: number;
-    title: string;
-    created_at: string;
-};
+import { formatDate } from '@/lib/utils';
+import type { Document } from '@/types';
 
 type DocumentsProps = {
-    documents: Document[];
+    documents: Pick<Document, 'id' | 'title' | 'created_at'>[];
 };
-
-function formatDate(date: string) {
-    return new Intl.DateTimeFormat('ja-JP', {
-        dateStyle: 'long',
-        timeZone: 'Asia/Tokyo',
-    }).format(new Date(date));
-}
 
 export default function Documents({ documents: documentList }: DocumentsProps) {
     setLayoutProps({
