@@ -58,6 +58,10 @@ npm install
 </Tab>
 </Tabs>
 
+## インラインタグ
+
+これは <Badge color="green">New</Badge> なバッジと <Tooltip tip="Abstract Syntax Tree">AST</Tooltip> という用語です。文中の他のテキストを崩さずにペアリングされます。
+
 ## エラー耐性
 
 閉じ忘れたタグは親の終端で自動クローズされ、警告が vfile に記録されます。

@@ -17,6 +17,8 @@ type MintlifyElementProps = {
     className?: string;
     title?: string;
     href?: string;
+    color?: string;
+    tip?: string;
 };
 
 const CALLOUT_VARIANT_CLASSES: Record<string, string> = {
@@ -25,6 +27,13 @@ const CALLOUT_VARIANT_CLASSES: Record<string, string> = {
     info: 'border-sky-500/50 bg-sky-500/10',
     alert: 'border-red-500/50 bg-red-500/10',
     check: 'border-green-500/50 bg-green-500/10',
+};
+
+const BADGE_COLOR_CLASSES: Record<string, string> = {
+    green: 'bg-emerald-500/10 text-emerald-600',
+    red: 'bg-red-500/10 text-red-600',
+    blue: 'bg-sky-500/10 text-sky-600',
+    yellow: 'bg-amber-500/10 text-amber-600',
 };
 
 /**
@@ -96,6 +105,22 @@ const mintlifyComponents = {
             </summary>
             <div className="mt-2 grid gap-2">{children}</div>
         </details>
+    ),
+    badge: ({ color, children }: MintlifyElementProps) => (
+        <span
+            className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium',
+                BADGE_COLOR_CLASSES[color ?? ''] ??
+                    'bg-muted text-muted-foreground',
+            )}
+        >
+            {children}
+        </span>
+    ),
+    tooltip: ({ tip, children }: MintlifyElementProps) => (
+        <span className="underline decoration-dotted" title={tip}>
+            {children}
+        </span>
     ),
 } as unknown as Components;
 
