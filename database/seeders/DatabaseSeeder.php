@@ -19,12 +19,16 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
+        $testUser = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+        User::factory()->create([
+            'name' => 'Test User2',
+            'email' => 'test2@example.com',
+        ]);
 
-        Document::factory()->create([
+        Document::factory()->for($testUser)->create([
             'title' => 'Markdownでドキュメントを書く',
             'content' => File::get(database_path('seeders/sample-document.md')),
         ]);

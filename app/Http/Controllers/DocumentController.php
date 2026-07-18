@@ -16,7 +16,8 @@ class DocumentController extends Controller
     public function index(): Response
     {
         $documents = Document::query()
-            ->select(['id', 'title', 'created_at'])
+            ->select(['id', 'user_id', 'title', 'created_at'])
+            ->with('user:id,name')
             ->latest()
             ->get();
 
@@ -58,6 +59,8 @@ class DocumentController extends Controller
      */
     public function show(Document $document): Response
     {
+        $document->load('user:id,name');
+
         return Inertia::render('documents/show', [
             'document' => $document,
         ]);
