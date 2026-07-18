@@ -108,6 +108,7 @@ export default [
             'node_modules',
             'inkstream',
             'inkstream2',
+            'thinkstream',
             'public',
             'bootstrap/ssr',
             'tailwind.config.js',

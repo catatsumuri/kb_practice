@@ -9,6 +9,11 @@ test('シーダーはサンプルドキュメントを作成する', function ()
     expect(Document::query()->pluck('title')->all())->toBe([
         'Markdownでドキュメントを書く',
         'Mintlifyコンポーネント記法 (inkstream2)',
+        'Markdown Syntax Guide',
+        'Extended Markdown Syntax',
+        'Zenn Syntax',
+        'Mintlify Syntax',
+        'Thinkstream Syntax',
     ]);
 
     $mintlifyDocument = Document::query()
@@ -16,4 +21,12 @@ test('シーダーはサンプルドキュメントを作成する', function ()
         ->sole();
 
     expect($mintlifyDocument->content)->toContain('<Steps>');
+
+    $syntaxGuide = Document::query()
+        ->where('title', 'Mintlify Syntax')
+        ->sole();
+
+    expect($syntaxGuide->content)
+        ->toContain('<CardGroup cols={2}>')
+        ->toContain('<Tree>');
 });

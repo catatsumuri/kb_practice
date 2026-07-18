@@ -7,8 +7,12 @@ import { cn } from '@/lib/utils';
 import {
     normalizeMintlifyBlocks,
     normalizeZennDirectiveShorthand,
+    normalizeZennImages,
+    parseImageMetadata,
     remarkCodeFenceComponents,
+    remarkGithubAlerts,
     remarkMintlifyTags,
+    remarkTreeTags,
     remarkZennDirective,
 } from '@catatsumuri/inkstream2';
 import type {
@@ -31,6 +35,17 @@ type MintlifyElementProps = {
     tree?: string;
     quiz?: string;
     chart?: string;
+    label?: string;
+    description?: string;
+    tags?: string;
+    name?: string;
+    type?: string;
+    required?: string;
+    deprecated?: string;
+    default?: string;
+    path?: string;
+    query?: string;
+    body?: string;
 };
 
 const CALLOUT_VARIANT_CLASSES: Record<string, string> = {
@@ -76,6 +91,38 @@ function TreeNodeItem({ node }: { node: TreeNode }) {
                 </ul>
             </details>
         </li>
+    );
+}
+
+function ApiField({
+    name,
+    type,
+    required,
+    deprecated,
+    location,
+    children,
+}: MintlifyElementProps & { location?: 'path' | 'query' | 'body' }) {
+    return (
+        <div className="grid gap-1 border-t border-border py-3">
+            <p className="flex flex-wrap items-center gap-2 font-mono text-xs">
+                <span className="font-semibold">{name}</span>
+                {location && (
+                    <span className="rounded bg-muted px-1.5 py-0.5">
+                        {location}
+                    </span>
+                )}
+                {type && <span className="text-muted-foreground">{type}</span>}
+                {required === 'true' && (
+                    <span className="text-red-600">required</span>
+                )}
+                {deprecated === 'true' && (
+                    <span className="text-amber-600 line-through">
+                        deprecated
+                    </span>
+                )}
+            </p>
+            <div className="grid gap-1 text-sm">{children}</div>
+        </div>
     );
 }
 
@@ -166,6 +213,83 @@ const mintlifyComponents = {
             {children}
         </span>
     ),
+    img: ({ src, alt }: { src?: string; alt?: string }) => {
+        const {
+            src: cleanSrc,
+            width,
+            height,
+            caption,
+        } = parseImageMetadata(src);
+
+        const image = (
+            <img
+                src={cleanSrc}
+                alt={alt ?? ''}
+                width={width}
+                height={height}
+                className="max-w-full rounded-lg"
+            />
+        );
+
+        if (!caption) {
+            return image;
+        }
+
+        return (
+            <span className="inline-grid justify-items-center gap-1">
+                {image}
+                <span className="text-xs text-muted-foreground">{caption}</span>
+            </span>
+        );
+    },
+    update: ({ label, description, tags, children }: MintlifyElementProps) => (
+        <section className="grid grid-cols-[8rem_1fr] gap-4 border-t border-border py-4">
+            <div className="grid content-start gap-1">
+                {label && <p className="font-semibold">{label}</p>}
+                {description && (
+                    <p className="text-xs text-muted-foreground">
+                        {description}
+                    </p>
+                )}
+                {tags && (
+                    <p className="flex flex-wrap gap-1">
+                        {tags.split(',').map((tag) => (
+                            <span
+                                key={tag}
+                                className="rounded-full bg-muted px-2 py-0.5 text-xs"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </p>
+                )}
+            </div>
+            <div className="grid content-start gap-2">{children}</div>
+        </section>
+    ),
+    codegroup: ({ children }: MintlifyElementProps) => (
+        <div className="grid gap-2 rounded-lg border border-border p-3">
+            {children}
+        </div>
+    ),
+    responsefield: (props: MintlifyElementProps) => <ApiField {...props} />,
+    paramfield: (props: MintlifyElementProps) => {
+        const location = props.path
+            ? (['path', props.path] as const)
+            : props.query
+              ? (['query', props.query] as const)
+              : props.body
+                ? (['body', props.body] as const)
+                : undefined;
+
+        return (
+            <ApiField
+                {...props}
+                name={location ? location[1] : props.name}
+                location={location?.[0]}
+            />
+        );
+    },
     tree: ({ tree }: MintlifyElementProps) => {
         const nodes = parseJsonProp<TreeNode[]>(tree);
 
@@ -266,13 +390,17 @@ export function MarkdownContent({ children }: MarkdownContentProps) {
                     remarkGfm,
                     remarkDirective,
                     remarkZennDirective,
+                    remarkGithubAlerts,
                     remarkMintlifyTags,
+                    remarkTreeTags,
                     remarkCodeFenceComponents,
                 ]}
                 components={mintlifyComponents}
             >
-                {normalizeZennDirectiveShorthand(
-                    normalizeMintlifyBlocks(children),
+                {normalizeZennImages(
+                    normalizeZennDirectiveShorthand(
+                        normalizeMintlifyBlocks(children),
+                    ),
                 )}
             </Markdown>
         </div>

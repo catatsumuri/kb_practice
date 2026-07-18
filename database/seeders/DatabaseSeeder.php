@@ -28,14 +28,21 @@ class DatabaseSeeder extends Seeder
             'email' => 'test2@example.com',
         ]);
 
-        Document::factory()->for($testUser)->create([
-            'title' => 'Markdownでドキュメントを書く',
-            'content' => File::get(database_path('seeders/sample-document.md')),
-        ]);
+        $documents = [
+            'Markdownでドキュメントを書く' => 'sample-document.md',
+            'Mintlifyコンポーネント記法 (inkstream2)' => 'sample-document-mintlify.md',
+            'Markdown Syntax Guide' => 'syntax-guide-index.md',
+            'Extended Markdown Syntax' => 'syntax-guide-extended.md',
+            'Zenn Syntax' => 'syntax-guide-zenn.md',
+            'Mintlify Syntax' => 'syntax-guide-mintlify.md',
+            'Thinkstream Syntax' => 'syntax-guide-thinkstream.md',
+        ];
 
-        Document::factory()->for($testUser)->create([
-            'title' => 'Mintlifyコンポーネント記法 (inkstream2)',
-            'content' => File::get(database_path('seeders/sample-document-mintlify.md')),
-        ]);
+        foreach ($documents as $title => $filename) {
+            Document::factory()->for($testUser)->create([
+                'title' => $title,
+                'content' => File::get(database_path("seeders/{$filename}")),
+            ]);
+        }
     }
 }
