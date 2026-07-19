@@ -25,6 +25,28 @@ test('一覧には自分のドキュメントのみ表示される', function ()
             ->where('documents.0.id', $ownDocument->id));
 });
 
+test('新規作成フォームにtitleクエリパラメータが渡されるとタイトルが初期入力される', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('documents.create', ['title' => 'ブロークンwikilinkのタイトル']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/create')
+            ->where('initialTitle', 'ブロークンwikilinkのタイトル'));
+});
+
+test('新規作成フォームはtitleクエリパラメータなしでも表示できる', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('documents.create'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/create')
+            ->where('initialTitle', null));
+});
+
 test('作成したドキュメントはログインユーザーに紐づく', function () {
     $user = User::factory()->create();
 
@@ -50,6 +72,21 @@ test('自分のドキュメントは表示できる', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('documents/show')
             ->where('document.id', $document->id));
+});
+
+test('wikilinkTargets には自分のドキュメントのタイトルとIDのみ含まれる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+    $ownOther = Document::factory()->for($user)->create(['title' => '別の自分のドキュメント']);
+    $othersDocument = Document::factory()->create(['title' => '他人のドキュメント']);
+
+    $this->actingAs($user)
+        ->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where("wikilinkTargets.{$ownOther->title}", $ownOther->id)
+            ->missing("wikilinkTargets.{$othersDocument->title}"));
 });
 
 test('自分のドキュメントは変更や削除ができる', function () {

@@ -1,0 +1,20 @@
+/*
+ * Bridges kb_practice's shadcn/ui-style theme tokens into inkstream's
+ * default stylesheet, so rendered documents pick up the app's own
+ * colors instead of inkstream's neutral zinc-style fallbacks. See
+ * @catatsumuri/inkstream/styles.css's header comment for the full
+ * --ink-* variable list and what each one falls back to.
+ */
+
+@import '@catatsumuri/inkstream/styles.css';
+
+:root {
+    --ink-border: var(--border);
+    --ink-foreground: var(--foreground);
+    --ink-muted: var(--muted);
+    --ink-muted-foreground: var(--muted-foreground);
+    --ink-primary: var(--primary);
+    --ink-primary-foreground: var(--primary-foreground);
+    --ink-accent: var(--accent);
+    --ink-card: var(--card);
+}

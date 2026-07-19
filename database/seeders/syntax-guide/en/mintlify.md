@@ -246,7 +246,7 @@ Mintlify is a documentation platform.
 :::
 ```
 
-### AccordionGroup
+#### AccordionGroup
 
 Use `<AccordionGroup>` to wrap multiple `<Accordion>` items into a single visually connected block.
 
@@ -618,7 +618,7 @@ Source:
 ```mdx
 <Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
 
-### Improved card icon support
+#### Improved card icon support
 
 Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
 
@@ -626,7 +626,7 @@ Cards now support brand icons from the `simple-icons` library in addition to Luc
 
 <Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
 
-### First release
+#### First release
 
 Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
 

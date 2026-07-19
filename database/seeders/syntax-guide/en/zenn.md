@@ -4,53 +4,65 @@
 
 Zenn supports a few convenient image patterns on top of regular Markdown.
 
-#### Basic Image
+---
+
+## Basic Image
 
 ```md
-![](/storage/namespaces/guide.png)
+![](/images/example.jpg)
 ```
 
-![](/storage/namespaces/guide.png)
+![](/images/example.jpg)
 
-#### Sized Image
+---
+
+## Sized Image
 
 Use `=250x` after the image URL to set the width in pixels.
 
 ```md
-![](/storage/namespaces/guide.png =250x)
+![](/images/example.jpg =250x)
 ```
 
-![](/storage/namespaces/guide.png =250x)
+![](/images/example.jpg =250x)
 
-#### Alt Text
+---
+
+## Alt Text
 
 ```md
-![Guide cover](/storage/namespaces/guide.png =250x)
+![Example landscape](/images/example.jpg =250x)
 ```
 
-![Guide cover](/storage/namespaces/guide.png =250x)
+![Example landscape](/images/example.jpg =250x)
 
-#### Caption
+---
+
+## Caption
 
 Place italic text on the next line to display it like a caption.
 
 ```md
-![](/storage/namespaces/guide.png =250x)
-*Guide cover image*
+![](/images/example.jpg =250x)
+*Example landscape image*
 ```
 
-![](/storage/namespaces/guide.png =250x)
-*Guide cover image*
+![](/images/example.jpg =250x)
+*Example landscape image*
 
-#### Linked Image
+---
+
+## Linked Image
 
 ```md
-[![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
+[![](/images/example.jpg =250x)](https://zenn.dev)
 ```
 
-[![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
+[![](/images/example.jpg =250x)](https://zenn.dev)
 
-#### Message
+---
+
+## Message
 
 Wrap content in `:::message` to display an info callout.
 
@@ -104,7 +116,9 @@ Helpful tip.
 Success or confirmation.
 :::
 
-#### Details (Collapsible)
+---
+
+## Details (Collapsible)
 
 Wrap content in `:::details` followed by a title to create a collapsible block. The content is hidden until the reader clicks to expand it.
 
@@ -168,7 +182,9 @@ This note is inside a collapsible section.
 :::
 ::::
 
-#### Link Card
+---
+
+## Link Card
 
 A URL placed alone on its own line is automatically displayed as a card.
 
@@ -194,7 +210,9 @@ https://www.youtube.com/watch?v=WRVsOCh907o
 
 https://www.youtube.com/watch?v=WRVsOCh907o
 
-#### Code Block with Filename
+---
+
+## Code Block with Filename
 
 Add `:filename` after the language name to display a filename label above the code block.
 
@@ -214,7 +232,9 @@ export function greet(name: string): string {
 }
 ```
 
-#### Diff Highlighting
+---
+
+## Diff Highlighting
 
 Start the fence with `diff` followed by the language name to enable diff highlighting. Lines beginning with `+` are shown in green and lines beginning with `-` in red.
 
@@ -237,7 +257,9 @@ You can combine `diff` with a filename using `` ```diff ts:src/utils.ts ``:
  }
 ```
 
-#### GitHub Embed
+---
+
+## GitHub Embed
 
 A GitHub file URL placed alone on its own line is automatically embedded as a code block.
 

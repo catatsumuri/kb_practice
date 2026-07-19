@@ -32,11 +32,15 @@ class DocumentController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         Gate::authorize('create', Document::class);
 
-        return Inertia::render('documents/create');
+        $initialTitle = $request->query('title');
+
+        return Inertia::render('documents/create', [
+            'initialTitle' => is_string($initialTitle) ? $initialTitle : null,
+        ]);
     }
 
     /**
@@ -70,8 +74,13 @@ class DocumentController extends Controller
 
         $document->load('user:id,name');
 
+        $wikilinkTargets = Document::query()
+            ->where('user_id', $document->user_id)
+            ->pluck('id', 'title');
+
         return Inertia::render('documents/show', [
             'document' => $document,
+            'wikilinkTargets' => $wikilinkTargets,
         ]);
     }
 

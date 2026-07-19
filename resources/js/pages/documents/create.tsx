@@ -6,7 +6,11 @@ import {
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentForm } from '@/components/document-form';
 
-export default function CreateDocument() {
+type CreateDocumentProps = {
+    initialTitle: string | null;
+};
+
+export default function CreateDocument({ initialTitle }: CreateDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -31,6 +35,11 @@ export default function CreateDocument() {
                     form={store.form()}
                     cancelHref={index()}
                     submitLabel="保存"
+                    defaultValues={
+                        initialTitle
+                            ? { title: initialTitle, content: '' }
+                            : undefined
+                    }
                 />
             </main>
         </>

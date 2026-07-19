@@ -1,11 +1,17 @@
+import { extractMarkdownHeadings } from '@catatsumuri/inkstream';
+import type { WikilinkResolution } from '@catatsumuri/inkstream';
+import { InkstreamMarkdown } from '@catatsumuri/inkstream/react';
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { useCallback, useMemo } from 'react';
 import {
+    create,
     destroy,
     edit,
     index,
     show,
 } from '@/actions/App/Http/Controllers/DocumentController';
-import { MarkdownContent } from '@/components/markdown-content';
+import { fetch as ogpFetch } from '@/actions/App/Http/Controllers/OgpController';
+import { DocumentTableOfContents } from '@/components/document-table-of-contents';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -28,9 +34,13 @@ import type { DocumentWithUser } from '@/types';
 
 type ShowDocumentProps = {
     document: DocumentWithUser;
+    wikilinkTargets: Record<string, number>;
 };
 
-export default function ShowDocument({ document }: ShowDocumentProps) {
+export default function ShowDocument({
+    document,
+    wikilinkTargets,
+}: ShowDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -43,6 +53,29 @@ export default function ShowDocument({ document }: ShowDocumentProps) {
             },
         ],
     });
+
+    const headings = useMemo(
+        () => extractMarkdownHeadings(document.content),
+        [document.content],
+    );
+
+    // Wikilinks resolve against document titles (kb_practice has no
+    // namespace/slug path, unlike thinkstream's original full_path
+    // scheme). An unmatched title routes to the create form with the
+    // title pre-filled, so following the link creates the missing page.
+    const resolveWikilink = useCallback(
+        (path: string): WikilinkResolution => {
+            const targetId = wikilinkTargets[path];
+
+            return targetId
+                ? { url: show(targetId).url, exists: true }
+                : {
+                      url: create({ query: { title: path } }).url,
+                      exists: false,
+                  };
+        },
+        [wikilinkTargets],
+    );
 
     return (
         <>
@@ -100,20 +133,33 @@ export default function ShowDocument({ document }: ShowDocumentProps) {
                     </div>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{document.title}</CardTitle>
-                        <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
-                            <span>作成者：{document.user.name}</span>
-                            <time dateTime={document.created_at}>
-                                {formatDate(document.created_at)}
-                            </time>
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <MarkdownContent>{document.content}</MarkdownContent>
-                    </CardContent>
-                </Card>
+                <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
+                    <Card className="min-w-0">
+                        <CardHeader>
+                            <CardTitle>{document.title}</CardTitle>
+                            <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                                <span>作成者：{document.user.name}</span>
+                                <time dateTime={document.created_at}>
+                                    {formatDate(document.created_at)}
+                                </time>
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <InkstreamMarkdown
+                                ogpEndpoint={ogpFetch.url()}
+                                resolveWikilink={resolveWikilink}
+                            >
+                                {document.content}
+                            </InkstreamMarkdown>
+                        </CardContent>
+                    </Card>
+
+                    {headings.length > 0 && (
+                        <div className="hidden lg:block">
+                            <DocumentTableOfContents headings={headings} />
+                        </div>
+                    )}
+                </div>
             </main>
         </>
     );

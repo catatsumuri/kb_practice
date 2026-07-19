@@ -184,7 +184,7 @@ Source:
 
 Use `chart:bar` for a horizontal bar chart and `chart:radar` for a radar chart. Both use the same key-value format.
 
-### Bar Chart
+#### Bar Chart
 
 Live example:
 
@@ -216,7 +216,7 @@ smoothness: 5
 ```
 ````
 
-### Radar Chart
+#### Radar Chart
 
 Live example:
 
@@ -280,8 +280,20 @@ Source:
 [[syntax/wikilinks|this page]]
 ```
 
+#### Resolved Wikilink
+
+When `full_path` matches an existing document's title in this KB, it resolves to a link to that document.
+
+[[Zenn Syntax]]
+
+Source:
+
+```md
+[[Zenn Syntax]]
+```
+
 Notes:
 
-- `full_path` is the namespace path plus slug, e.g. `blog/my-post`.
-- Wikilinks always resolve to `/{full_path}` on the public site.
+- kb_practice resolves `full_path` against document titles (not Thinkstream's original namespace-plus-slug paths).
+- When no title matches, as in the two examples above, the link resolves to the new-document form with `full_path` pre-filled as the title.
 - Existing `[label](/path)` Markdown links continue to work alongside wikilinks.

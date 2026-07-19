@@ -1,3 +1,9 @@
+## Markdown Syntax Guide
+
+A quick reference for the core Markdown syntax supported by this app, from headings and text formatting to links, tables, and code blocks.
+
+---
+
 ## What is Markdown?
 
 Markdown is a lightweight markup language for formatting plain text. You use simple symbols like `#`, `*`, and `-` to define structure, and it converts to HTML for display. The goal is to keep source text readable as-is, even before rendering.

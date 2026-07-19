@@ -1,12 +1,10 @@
 ## Extended Markdown Syntax
 
-Extended syntax adds features beyond the core Markdown spec. This page covers GitHub Flavored Markdown (GFM) extensions, which are supported by this renderer.
-
-> Features marked **✓ Renders here** are active in this app. Others may require additional plugins or a different renderer.
+Extended syntax adds features beyond the core Markdown spec. This page covers the GitHub Flavored Markdown (GFM) extensions supported by this renderer, plus a few common extensions that require additional plugins.
 
 ---
 
-## Strikethrough ✓ Renders here
+## Strikethrough
 
 Wrap text in `~~double tildes~~`.
 
@@ -18,7 +16,7 @@ The price was ~~$99~~ now **$49**.
 
 ---
 
-## Task Lists ✓ Renders here
+## Task Lists
 
 Use `- [ ]` for unchecked and `- [x]` for checked items.
 
@@ -36,7 +34,7 @@ Use `- [ ]` for unchecked and `- [x]` for checked items.
 
 ---
 
-## Tables ✓ Renders here
+## Tables
 
 Tables use `|` for column separators and `:` in the divider row for alignment.
 
@@ -58,7 +56,7 @@ Tables use `|` for column separators and `:` in the divider row for alignment.
 
 ---
 
-## Autolinks ✓ Renders here
+## Autolinks
 
 Angle-bracket autolinks turn a raw URL or email into a clickable link.
 
@@ -72,7 +70,7 @@ Contact us at <hello@example.com>.
 
 ---
 
-## Footnotes ✓ Renders here
+## Footnotes
 
 Add `[^label]` inline, then define the footnote anywhere in the document. The renderer collects them at the bottom.
 
@@ -103,7 +101,7 @@ The spec[^spec] describes the syntax. There are many implementations[^impl].
 
 ---
 
-## Alerts ✓ Renders here
+## Alerts
 
 GitHub-style alerts turn a blockquote into a colored callout when its first line is a `[!TYPE]` marker on its own. Five types are supported.
 
@@ -143,7 +141,61 @@ The marker must be alone on the first line — `> [!NOTE] text on the same line`
 
 ---
 
-## Highlight ✗ Requires plugin
+## Mermaid Diagrams
+
+A code fence with the `mermaid` language identifier renders as a diagram instead of code, the same way it does on GitHub. The diagram source stays readable as plain text in editors that don't support it.
+
+#### Flowchart
+
+````
+```mermaid
+flowchart LR
+    A[Draft] --> B{Review}
+    B -->|Approved| C[Publish]
+    B -->|Changes requested| A
+```
+````
+
+```mermaid
+flowchart LR
+    A[Draft] --> B{Review}
+    B -->|Approved| C[Publish]
+    B -->|Changes requested| A
+```
+
+#### Sequence Diagram
+
+````
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Server
+    U->>S: POST /login
+    S-->>U: 302 Found
+    U->>S: GET /dashboard
+    S-->>U: 200 OK
+```
+````
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Server
+    U->>S: POST /login
+    S-->>U: 302 Found
+    U->>S: GET /dashboard
+    S-->>U: 200 OK
+```
+
+> Mermaid supports many more diagram types — state diagrams, class diagrams, Gantt charts, pie charts, and others. See the [Mermaid documentation](https://mermaid.js.org) for the full syntax.
+
+---
+
+## Unsupported Extensions
+
+The extensions below are common in other Markdown flavors but are not enabled in this renderer — without the plugins they mention, their delimiters render as plain text.
+
+#### Highlight
 
 The `==highlight==` syntax is **not** part of GFM. It requires a plugin such as `remark-mark-and-unmark`. Without it, the `==` delimiters are rendered as plain text.
 
@@ -153,9 +205,7 @@ The `==highlight==` syntax is **not** part of GFM. It requires a plugin such as 
 
 With the plugin active it renders as a `<mark>` element (yellow background by default).
 
----
-
-## Subscript and Superscript ✗ Requires plugin
+#### Subscript and Superscript
 
 `~sub~` and `^sup^` are not standard GFM. They need `remark-sub` / `remark-sup` or similar.
 
@@ -166,9 +216,7 @@ E = mc^2^    → E = mc²
 
 Without the plugins the delimiters appear literally.
 
----
-
-## Definition Lists ✗ Requires plugin
+#### Definition Lists
 
 Definition lists use a term followed by `:` definitions. Not supported in GFM — requires `remark-definition-list` or Pandoc.
 
@@ -180,9 +228,7 @@ HTML
 :   The standard markup language for web pages.
 ```
 
----
-
-## Heading IDs ✗ Renderer-dependent
+#### Heading IDs
 
 Some renderers accept `{#custom-id}` after a heading to set an explicit `id` attribute for deep linking.
 
@@ -192,9 +238,7 @@ Some renderers accept `{#custom-id}` after a heading to set an explicit `id` att
 
 GFM renderers (like GitHub) auto-generate IDs from heading text. Explicit IDs are supported by Pandoc and some static site generators, but not by `remark-gfm` out of the box.
 
----
-
-## Emoji Shortcodes ✗ Requires plugin
+#### Emoji Shortcodes
 
 `:shortcode:` syntax is popular on GitHub but requires `remark-emoji` or similar to convert to actual emoji characters.
 
