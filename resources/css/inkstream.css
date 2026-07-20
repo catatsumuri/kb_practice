@@ -5,7 +5,6 @@
  * @catatsumuri/inkstream/styles.css's header comment for the full
  * --ink-* variable list and what each one falls back to.
  */
-
 @import '@catatsumuri/inkstream/styles.css';
 
 :root {
@@ -17,4 +16,15 @@
     --ink-primary-foreground: var(--primary-foreground);
     --ink-accent: var(--accent);
     --ink-card: var(--card);
+}
+
+/*
+ * Card/CardContent are flex/grid items, whose default min-width:auto lets
+ * a wide descendant (e.g. the GitHub embed's min-width:max-content pre)
+ * force the whole page wider than the viewport instead of scrolling
+ * internally. Scoped to cards wrapping inkstream content only.
+ */
+[data-slot='card']:has(.ink-markdown),
+[data-slot='card-content']:has(.ink-markdown) {
+    min-width: 0;
 }
