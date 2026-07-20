@@ -1,6 +1,6 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { router } from '@inertiajs/react';
 import { KeyRound } from 'lucide-react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegistrationController';
 import Heading from '@/components/heading';
 import PasskeyItem from '@/components/passkey-item';

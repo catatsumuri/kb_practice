@@ -1,34 +1,48 @@
 <?php
 
+namespace Tests\Feature\Auth;
+
 use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Fortify\Features;
+use Tests\TestCase;
 
-beforeEach(function () {
-    $this->skipUnlessFortifyHas(Features::emailVerification());
-});
+class VerificationNotificationTest extends TestCase
+{
+    use RefreshDatabase;
 
-test('sends verification notification', function () {
-    Notification::fake();
+    protected function setUp(): void
+    {
+        parent::setUp();
 
-    $user = User::factory()->unverified()->create();
+        $this->skipUnlessFortifyHas(Features::emailVerification());
+    }
 
-    $this->actingAs($user)
-        ->post(route('verification.send'))
-        ->assertRedirect(route('home'));
+    public function test_sends_verification_notification(): void
+    {
+        Notification::fake();
 
-    Notification::assertSentTo($user, VerifyEmail::class);
-});
+        $user = User::factory()->unverified()->create();
 
-test('does not send verification notification if email is verified', function () {
-    Notification::fake();
+        $this->actingAs($user)
+            ->post(route('verification.send'))
+            ->assertRedirect(route('home'));
 
-    $user = User::factory()->create();
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
 
-    $this->actingAs($user)
-        ->post(route('verification.send'))
-        ->assertRedirect(route('dashboard', absolute: false));
+    public function test_does_not_send_verification_notification_if_email_is_verified(): void
+    {
+        Notification::fake();
 
-    Notification::assertNothingSent();
-});
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('verification.send'))
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        Notification::assertNothingSent();
+    }
+}

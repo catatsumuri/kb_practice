@@ -1,5 +1,5 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';

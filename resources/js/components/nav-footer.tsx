@@ -1,5 +1,5 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import type { ComponentPropsWithoutRef } from 'react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import {
     SidebarGroup,
     SidebarGroupContent,

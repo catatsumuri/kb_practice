@@ -1,6 +1,6 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { KeyRound, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,

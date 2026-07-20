@@ -1,5 +1,5 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Link } from '@inertiajs/react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import {
     SidebarGroup,
     SidebarGroupLabel,

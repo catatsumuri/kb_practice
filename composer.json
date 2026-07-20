@@ -22,15 +22,13 @@
     "require-dev": {
         "fakerphp/faker": "^1.24",
         "larastan/larastan": "^3.9",
-        "laravel/boost": "^2.2",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
         "laravel/sail": "^1.53",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.9.3",
-        "pestphp/pest": "^4.7",
-        "pestphp/pest-plugin-laravel": "^4.1"
+        "phpunit/phpunit": "^12.5.23"
     },
     "autoload": {
         "psr-4": {
@@ -87,10 +85,10 @@
             "@patch-vendor"
         ],
         "post-update-cmd": [
+            "@php artisan install:features --ansi",
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
             "@patch-vendor",
-            "@php artisan lang:update --ansi",
-            "@php artisan boost:update --ansi"
+            "@php artisan lang:update --ansi"
         ],
         "patch-vendor": [
             "@php scripts/patch-vendor.php"
@@ -111,7 +109,9 @@
         "laravel": {
             "dont-discover": [],
             "installer": {
-                "post-create-project": []
+                "post-create-project": [
+                    "@php artisan install:features --ansi"
+                ]
             }
         }
     },

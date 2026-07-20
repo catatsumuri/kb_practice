@@ -1,104 +1,130 @@
 <?php
 
+namespace Tests\Feature\Settings;
+
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
+use Tests\TestCase;
 
-test('security page is displayed', function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+class SecurityTest extends TestCase
+{
+    use RefreshDatabase;
 
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
-    Features::passkeys([
-        'confirmPassword' => true,
-    ]);
+    public function test_security_page_is_displayed()
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
-    $user = User::factory()->create();
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]);
+        /* @chisel-passkeys */
+        Features::passkeys([
+            'confirmPassword' => true,
+        ]);
+        /* @end-chisel-passkeys */
 
-    $this->actingAs($user)
-        ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('security.edit'))
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('settings/security')
-            ->where('canManagePasskeys', true)
-            ->where('passkeys', [])
-            ->where('canManageTwoFactor', true)
-            ->where('twoFactorEnabled', false),
-        );
-});
+        $user = User::factory()->create();
 
-test('security page requires password confirmation when enabled', function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
+        $this->actingAs($user)
+            /* @chisel-password-confirmation */
+            ->withSession(['auth.password_confirmed_at' => time()])
+            /* @end-chisel-password-confirmation */
+            ->get(route('security.edit'))
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('settings/security')
+                /* @chisel-passkeys */
+                ->where('canManagePasskeys', true)
+                ->where('passkeys', [])
+                /* @end-chisel-passkeys */
+                ->where('canManageTwoFactor', true)
+                ->where('twoFactorEnabled', false),
+            );
+    }
 
-    $user = User::factory()->create();
+    /* @chisel-password-confirmation */
+    public function test_security_page_requires_password_confirmation_when_enabled()
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
+        $user = User::factory()->create();
 
-    $response = $this->actingAs($user)
-        ->get(route('security.edit'));
-
-    $response->assertRedirect(route('password.confirm'));
-});
-
-test('security page renders without two factor when feature is disabled', function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-    config(['fortify.features' => []]);
-
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->withSession(['auth.password_confirmed_at' => time()])
-        ->get(route('security.edit'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('settings/security')
-            ->where('canManagePasskeys', false)
-            ->where('passkeys', [])
-            ->where('canManageTwoFactor', false)
-            ->missing('twoFactorEnabled')
-            ->missing('requiresConfirmation'),
-        );
-});
-
-test('password can be updated', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from(route('security.edit'))
-        ->put(route('user-password.update'), [
-            'current_password' => 'password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
         ]);
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('security.edit'));
+        $response = $this->actingAs($user)
+            ->get(route('security.edit'));
 
-    expect(Hash::check('new-password', $user->refresh()->password))->toBeTrue();
-});
+        $response->assertRedirect(route('password.confirm'));
+    }
+    /* @end-chisel-password-confirmation */
 
-test('correct password must be provided to update password', function () {
-    $user = User::factory()->create();
+    public function test_security_page_renders_without_two_factor_when_feature_is_disabled()
+    {
+        $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
-    $response = $this
-        ->actingAs($user)
-        ->from(route('security.edit'))
-        ->put(route('user-password.update'), [
-            'current_password' => 'wrong-password',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ]);
+        config(['fortify.features' => []]);
 
-    $response
-        ->assertSessionHasErrors('current_password')
-        ->assertRedirect(route('security.edit'));
-});
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            /* @chisel-password-confirmation */
+            ->withSession(['auth.password_confirmed_at' => time()])
+            /* @end-chisel-password-confirmation */
+            ->get(route('security.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('settings/security')
+                /* @chisel-passkeys */
+                ->where('canManagePasskeys', false)
+                ->where('passkeys', [])
+                /* @end-chisel-passkeys */
+                ->where('canManageTwoFactor', false)
+                ->missing('twoFactorEnabled')
+                ->missing('requiresConfirmation'),
+            );
+    }
+
+    public function test_password_can_be_updated()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
+
+        $response
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('security.edit'));
+
+        $this->assertTrue(Hash::check('new-password', $user->refresh()->password));
+    }
+
+    public function test_correct_password_must_be_provided_to_update_password()
+    {
+        $user = User::factory()->create();
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'current_password' => 'wrong-password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ]);
+
+        $response
+            ->assertSessionHasErrors('current_password')
+            ->assertRedirect(route('security.edit'));
+    }
+}

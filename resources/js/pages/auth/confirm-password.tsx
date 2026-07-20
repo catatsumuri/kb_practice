@@ -1,16 +1,18 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
-import {
-    index as confirmOptions,
-    store as confirmStore,
-} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
+import { lang } from '@erag/lang-sync-inertia/react';
 import InputError from '@/components/input-error';
-import PasskeyVerify from '@/components/passkey-verify';
 import PasswordInput from '@/components/password-input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store } from '@/routes/password/confirm';
+/* @chisel-passkeys */
+import {
+    index as confirmOptions,
+    store as confirmStore,
+} from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
+import PasskeyVerify from '@/components/passkey-verify';
+/* @end-chisel-passkeys */
 
 export default function ConfirmPassword() {
     const { __ } = lang();
@@ -26,6 +28,7 @@ export default function ConfirmPassword() {
         <>
             <Head title={__('Confirm password')} />
 
+            {/* @chisel-passkeys */}
             <PasskeyVerify
                 routes={{
                     options: confirmOptions(),
@@ -35,6 +38,7 @@ export default function ConfirmPassword() {
                 loadingLabel={__('Confirming...')}
                 separator={__('Or confirm with password')}
             />
+            {/* @end-chisel-passkeys */}
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (

@@ -1,6 +1,6 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,

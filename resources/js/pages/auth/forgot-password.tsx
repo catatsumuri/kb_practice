@@ -1,6 +1,6 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';

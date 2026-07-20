@@ -1,7 +1,7 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Form } from '@inertiajs/react';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import AlertError from '@/components/alert-error';
 import { Button } from '@/components/ui/button';
 import {

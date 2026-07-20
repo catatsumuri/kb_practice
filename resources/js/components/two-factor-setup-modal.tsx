@@ -1,8 +1,8 @@
-import { lang } from '@erag/lang-sync-inertia/react';
 import { Form } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import AlertError from '@/components/alert-error';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -294,9 +294,12 @@ export default function TwoFactorSetupModal({
     }, [twoFactorEnabled, showVerificationStep, __]);
 
     const resetModalState = useCallback(() => {
+        if (twoFactorEnabled) {
+            clearSetupData();
+        }
+
         setShowVerificationStep(false);
-        clearSetupData();
-    }, [clearSetupData]);
+    }, [clearSetupData, twoFactorEnabled]);
 
     const handleClose = useCallback(() => {
         resetModalState();
@@ -310,8 +313,9 @@ export default function TwoFactorSetupModal({
             return;
         }
 
+        clearSetupData();
         handleClose();
-    }, [requiresConfirmation, handleClose]);
+    }, [requiresConfirmation, clearSetupData, handleClose]);
 
     const fetchSetupDataRef = useRef(fetchSetupData);
 
