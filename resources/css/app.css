@@ -2,6 +2,8 @@
 
 @import 'tw-animate-css';
 
+@plugin '@tailwindcss/typography';
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
@@ -139,5 +141,11 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+}
+
+@layer components {
+    .markdown-content {
+        @apply prose prose-sm max-w-none break-words dark:prose-invert;
     }
 }

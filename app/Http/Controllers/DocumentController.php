@@ -15,7 +15,10 @@ class DocumentController extends Controller
      */
     public function index(): Response
     {
-        $documents = Document::latest()->get();
+        $documents = Document::query()
+            ->select(['id', 'title', 'created_at'])
+            ->latest()
+            ->get();
 
         return Inertia::render('documents/index', [
             'documents' => $documents,
@@ -53,9 +56,11 @@ class DocumentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Document $document): void
+    public function show(Document $document): Response
     {
-        //
+        return Inertia::render('documents/show', [
+            'document' => $document,
+        ]);
     }
 
     /**
@@ -77,8 +82,15 @@ class DocumentController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Document $document): void
+    public function destroy(Document $document): RedirectResponse
     {
-        //
+        $document->delete();
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ドキュメントを削除しました',
+        ]);
+
+        return to_route('documents.index');
     }
 }

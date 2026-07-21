@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\File;
 
 class DatabaseSeeder extends Seeder
 {
@@ -23,6 +24,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]);
 
-        Document::factory()->count(3)->create();
+        Document::factory()->create([
+            'title' => 'Markdownでドキュメントを書く',
+            'content' => File::get(database_path('seeders/sample-document.md')),
+        ]);
     }
 }
