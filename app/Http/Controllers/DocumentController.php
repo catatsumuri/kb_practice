@@ -66,17 +66,31 @@ class DocumentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Document $document): void
+    public function edit(Document $document): Response
     {
-        //
+        return Inertia::render('documents/edit', [
+            'document' => $document,
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Document $document): void
+    public function update(Request $request, Document $document): RedirectResponse
     {
-        //
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+        ]);
+
+        $document->update($validated);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ドキュメントを更新しました',
+        ]);
+
+        return to_route('documents.show', $document);
     }
 
     /**

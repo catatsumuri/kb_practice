@@ -30,6 +30,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
+        "@codemirror/lang-markdown": "^6.5.1",
         "@erag/lang-sync-inertia": "^3.0.0",
         "@inertiajs/react": "^3.0.0",
         "@inertiajs/vite": "^3.0.0",
@@ -53,6 +54,7 @@
         "@vitejs/plugin-react": "^5.2.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
+        "codemirror": "^6.0.2",
         "concurrently": "^9.0.1",
         "globals": "^15.14.0",
         "input-otp": "^1.4.2",

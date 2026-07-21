@@ -3,6 +3,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
     destroy,
+    edit,
     index,
     show,
 } from '@/actions/App/Http/Controllers/DocumentController';
@@ -67,8 +68,8 @@ export default function ShowDocument({ document }: ShowDocumentProps) {
                     </Button>
 
                     <div className="flex items-center gap-2">
-                        <Button type="button" variant="outline">
-                            編集
+                        <Button variant="outline" asChild>
+                            <Link href={edit(document.id)}>編集</Link>
                         </Button>
 
                         <Dialog>

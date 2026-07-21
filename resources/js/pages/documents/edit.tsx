@@ -1,8 +1,9 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import {
-    create,
+    edit,
     index,
-    store,
+    show,
+    update,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
-export default function CreateDocument() {
+type Document = {
+    id: number;
+    title: string;
+    content: string;
+};
+
+type EditDocumentProps = {
+    document: Document;
+};
+
+export default function EditDocument({ document }: EditDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -25,26 +36,33 @@ export default function CreateDocument() {
                 href: index(),
             },
             {
-                title: '新規作成',
-                href: create(),
+                title: document.title,
+                href: show(document.id),
+            },
+            {
+                title: '編集',
+                href: edit(document.id),
             },
         ],
     });
 
     return (
         <>
-            <Head title="記事の新規作成" />
+            <Head title={`${document.title}を編集`} />
 
             <main className="p-4">
                 <Card>
                     <CardHeader>
-                        <CardTitle>記事の新規作成</CardTitle>
+                        <CardTitle>記事の編集</CardTitle>
                         <CardDescription>
-                            タイトルとMarkdown形式の本文を入力してください。
+                            タイトルとMarkdown形式の本文を編集できます。
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Form action={store()} className="grid gap-6">
+                        <Form
+                            action={update(document.id)}
+                            className="grid gap-6"
+                        >
                             {({ errors }) => (
                                 <>
                                     <div className="grid gap-2">
@@ -52,9 +70,11 @@ export default function CreateDocument() {
                                         <Input
                                             id="title"
                                             name="title"
+                                            defaultValue={document.title}
+                                            aria-invalid={Boolean(errors.title)}
                                             autoFocus
-                                            required
                                         />
+                                        <InputError message={errors.title} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -64,12 +84,12 @@ export default function CreateDocument() {
                                         <Textarea
                                             id="content"
                                             name="content"
+                                            defaultValue={document.content}
                                             aria-describedby="content-help"
                                             aria-invalid={Boolean(
                                                 errors.content,
                                             )}
                                             className="min-h-80 resize-y font-mono leading-6"
-                                            required
                                         />
                                         <p
                                             id="content-help"
@@ -82,11 +102,11 @@ export default function CreateDocument() {
 
                                     <div className="flex items-center justify-end gap-4">
                                         <Button variant="outline" asChild>
-                                            <Link href={index()}>
+                                            <Link href={show(document.id)}>
                                                 キャンセル
                                             </Link>
                                         </Button>
-                                        <Button type="submit">保存</Button>
+                                        <Button type="submit">更新</Button>
                                     </div>
                                 </>
                             )}
