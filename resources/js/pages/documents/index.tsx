@@ -13,9 +13,9 @@ import {
 } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 
-import type { Document } from '@/types';
+import type { DocumentWithUser } from '@/types';
 type DocumentsProps = {
-    documents: Pick<Document, 'id' | 'title' | 'created_at'>[];
+    documents: Pick<DocumentWithUser, 'id' | 'title' | 'created_at' | 'user'>[];
 };
 
 export default function Documents({ documents: documentList }: DocumentsProps) {
@@ -57,7 +57,10 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
                                                 <CardTitle>
                                                     {document.title}
                                                 </CardTitle>
-                                                <CardDescription>
+                                                <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                                                    <span>
+                                                        作成者：{document.user.name}
+                                                    </span>
                                                     <time
                                                         dateTime={
                                                             document.created_at

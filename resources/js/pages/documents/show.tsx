@@ -26,10 +26,10 @@ import {
 } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 
-import type { Document } from '@/types';
+import type { DocumentWithUser } from '@/types';
 
 type ShowDocumentProps = {
-    document: Document;
+    document: DocumentWithUser;
 };
 
 export default function ShowDocument({ document }: ShowDocumentProps) {
@@ -113,7 +113,8 @@ export default function ShowDocument({ document }: ShowDocumentProps) {
                 <Card>
                     <CardHeader>
                         <CardTitle>{document.title}</CardTitle>
-                        <CardDescription>
+                        <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                            <span>作成者：{document.user.name}</span>
                             <time dateTime={document.created_at}>
                                 {formatDate(document.created_at)}
                             </time>
