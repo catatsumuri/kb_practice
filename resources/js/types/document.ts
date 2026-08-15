@@ -1,3 +1,5 @@
+import type { User } from './auth';
+
 export type Document = {
     id: number;
     title: string;

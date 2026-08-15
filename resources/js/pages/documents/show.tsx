@@ -25,19 +25,26 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
+import { dashboard } from '@/routes';
 
 import type { DocumentWithUser } from '@/types';
 
 type ShowDocumentProps = {
     document: DocumentWithUser;
+    can: {
+        update: boolean;
+        delete: boolean;
+    };
 };
 
-export default function ShowDocument({ document }: ShowDocumentProps) {
+export default function ShowDocument({ document, can }: ShowDocumentProps) {
+    const returnRoute = can.update ? index() : dashboard();
+
     setLayoutProps({
         breadcrumbs: [
             {
-                title: 'ドキュメント',
-                href: index(),
+                title: can.update ? 'ドキュメント' : 'ダッシュボード',
+                href: returnRoute,
             },
             {
                 title: document.title,
@@ -53,10 +60,18 @@ export default function ShowDocument({ document }: ShowDocumentProps) {
             <main className="grid gap-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <Button variant="outline" asChild>
-                        <Link href={index()}>一覧へ戻る</Link>
+                        <Link href={returnRoute}>
+                            {can.update ? '一覧へ戻る' : 'ダッシュボードへ戻る'}
+                        </Link>
                     </Button>
 
-                    <div className="flex items-center gap-2">
+                    <div
+                        className={
+                            can.update || can.delete
+                                ? 'flex items-center gap-2'
+                                : 'hidden'
+                        }
+                    >
                         <Button variant="outline" asChild>
                             <Link href={edit(document.id)}>編集</Link>
                         </Button>

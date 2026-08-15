@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
 
@@ -20,7 +21,8 @@ class DocumentPolicy
      */
     public function view(User $user, Document $document): bool
     {
-        return $user->getKey() === $document->user_id;
+        return $this->isOwner($user, $document)
+            || $document->visibility === DocumentVisibility::Public;
     }
 
     /**
@@ -36,7 +38,7 @@ class DocumentPolicy
      */
     public function update(User $user, Document $document): bool
     {
-        return $this->view($user, $document);
+        return $this->isOwner($user, $document);
     }
 
     /**
@@ -44,7 +46,7 @@ class DocumentPolicy
      */
     public function delete(User $user, Document $document): bool
     {
-        return $this->view($user, $document);
+        return $this->isOwner($user, $document);
     }
 
     /**
@@ -61,5 +63,10 @@ class DocumentPolicy
     public function forceDelete(User $user, Document $document): bool
     {
         return false;
+    }
+
+    private function isOwner(User $user, Document $document): bool
+    {
+        return $user->getKey() === $document->user_id;
     }
 }

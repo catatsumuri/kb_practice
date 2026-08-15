@@ -72,6 +72,10 @@ class DocumentController extends Controller
 
         return Inertia::render('documents/show', [
             'document' => $document,
+            'can' => [
+                'update' => Gate::allows('update', $document),
+                'delete' => Gate::allows('delete', $document),
+            ],
         ]);
     }
 

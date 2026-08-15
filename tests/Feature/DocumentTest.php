@@ -1,9 +1,10 @@
 <?php
 
+use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
-use Inertia\Testing\AssertableInertia as Assert;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
@@ -52,7 +53,9 @@ test('自分のドキュメントは表示できる', function () {
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('documents/show')
-            ->where('document.id', $document->id));
+            ->where('document.id', $document->id)
+            ->where('can.update', true)
+            ->where('can.delete', true));
 });
 
 test('自分のドキュメントは変更や削除ができる', function () {
@@ -96,4 +99,32 @@ test('他のユーザーのドキュメントは表示や変更や削除がで�
     expect($document->fresh())
         ->title->toBe('他のユーザーのドキュメント')
         ->content->toBe('変更前の本文');
+});
+
+test('他のユーザーの公開ドキュメントは表示できるが変更や削除はできない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->create([
+        'title' => '公開ドキュメント',
+        'content' => '公開ドキュメントの本文',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->actingAs($user);
+
+    $this->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.id', $document->id)
+            ->where('document.title', '公開ドキュメント')
+            ->where('document.content', '公開ドキュメントの本文')
+            ->where('document.user.name', $document->user->name)
+            ->where('can.update', false)
+            ->where('can.delete', false));
+    $this->get(route('documents.edit', $document))->assertForbidden();
+    $this->put(route('documents.update', $document), [
+        'title' => '変更後のタイトル',
+        'content' => '変更後の本文',
+    ])->assertForbidden();
+    $this->delete(route('documents.destroy', $document))->assertForbidden();
 });

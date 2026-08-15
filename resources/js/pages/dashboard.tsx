@@ -1,9 +1,21 @@
-import { Head, setLayoutProps } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import { show } from '@/actions/App/Http/Controllers/DocumentController';
+import {
+    Card,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { formatDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import type { DocumentWithUser } from '@/types';
 
-export default function Dashboard() {
+type DashboardProps = {
+    documents: Pick<DocumentWithUser, 'id' | 'title' | 'created_at' | 'user'>[];
+};
+
+export default function Dashboard({ documents }: DashboardProps) {
     const { __ } = lang();
 
     setLayoutProps({
@@ -18,22 +30,63 @@ export default function Dashboard() {
     return (
         <>
             <Head title={__('Dashboard')} />
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
-                    <div className="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                    </div>
+            <main className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+                <div className="grid gap-2">
+                    <h1 className="text-2xl font-semibold tracking-tight">
+                        公開ドキュメント
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        すべてのユーザーが公開しているドキュメントの一覧です。
+                    </p>
                 </div>
-                <div className="relative min-h-[100vh] flex-1 overflow-hidden rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
-                </div>
-            </div>
+
+                {documents.length === 0 ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>
+                                公開ドキュメントはまだありません
+                            </CardTitle>
+                            <CardDescription>
+                                ドキュメントが公開されると、ここに表示されます。
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
+                ) : (
+                    <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {documents.map((document) => (
+                            <li key={document.id}>
+                                <Link
+                                    className="block h-full"
+                                    href={show(document.id)}
+                                    prefetch
+                                >
+                                    <Card className="h-full transition-colors hover:bg-muted/50">
+                                        <CardHeader>
+                                            <CardTitle className="line-clamp-2 leading-snug">
+                                                {document.title}
+                                            </CardTitle>
+                                            <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                                                <span>
+                                                    作成者：{document.user.name}
+                                                </span>
+                                                <time
+                                                    dateTime={
+                                                        document.created_at
+                                                    }
+                                                >
+                                                    {formatDate(
+                                                        document.created_at,
+                                                    )}
+                                                </time>
+                                            </CardDescription>
+                                        </CardHeader>
+                                    </Card>
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </main>
         </>
     );
 }

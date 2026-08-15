@@ -59,7 +59,8 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
                                                 </CardTitle>
                                                 <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
                                                     <span>
-                                                        作成者：{document.user.name}
+                                                        作成者：
+                                                        {document.user.name}
                                                     </span>
                                                     <time
                                                         dateTime={
