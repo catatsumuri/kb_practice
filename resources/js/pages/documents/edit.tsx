@@ -9,7 +9,7 @@ import { DocumentForm } from '@/components/document-form';
 
 import type { Document } from '@/types';
 type EditDocumentProps = {
-    document: Pick<Document, 'id' | 'title' | 'content'>;
+    document: Pick<Document, 'id' | 'title' | 'content' | 'visibility'>;
 };
 
 export default function EditDocument({ document }: EditDocumentProps) {

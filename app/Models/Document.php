@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['title', 'content'])]
+#[Fillable(['title', 'content', 'visibility'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */

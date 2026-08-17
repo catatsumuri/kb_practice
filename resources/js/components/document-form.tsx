@@ -11,13 +11,22 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import type { DocumentVisibility } from '@/types';
 import type { RouteFormDefinition } from '@/wayfinder';
 
 type DocumentFormValues = {
     title: string;
     content: string;
+    visibility: DocumentVisibility;
 };
 
 type LinkHref = ComponentProps<typeof Link>['href'];
@@ -59,6 +68,41 @@ export function DocumentForm({
                                     autoFocus
                                 />
                                 <InputError message={errors.title} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="visibility">公開範囲</Label>
+                                <Select
+                                    name="visibility"
+                                    defaultValue={
+                                        defaultValues?.visibility ?? 'private'
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="visibility"
+                                        className="w-full"
+                                        aria-invalid={Boolean(
+                                            errors.visibility,
+                                        )}
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="private">
+                                            非公開
+                                        </SelectItem>
+                                        <SelectItem value="unlisted">
+                                            限定公開
+                                        </SelectItem>
+                                        <SelectItem value="public">
+                                            公開
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">
+                                    公開したドキュメントは全ユーザーの公開一覧に表示されます。
+                                </p>
+                                <InputError message={errors.visibility} />
                             </div>
 
                             <div className="grid gap-2">

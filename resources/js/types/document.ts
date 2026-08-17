@@ -1,9 +1,12 @@
 import type { User } from './auth';
 
+export type DocumentVisibility = 'private' | 'public' | 'unlisted';
+
 export type Document = {
     id: number;
     title: string;
     content: string;
+    visibility: DocumentVisibility;
     created_at: string;
 };
 

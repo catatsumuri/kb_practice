@@ -36,12 +36,14 @@ test('作成したドキュメントはログインユーザーに紐づく', fu
         ->post(route('documents.store'), [
             'title' => '自分のドキュメント',
             'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
         ])
         ->assertRedirect(route('documents.index'));
 
     $document = Document::query()->sole();
 
-    expect($document->user->is($user))->toBeTrue();
+    expect($document->user->is($user))->toBeTrue()
+        ->and($document->visibility)->toBe(DocumentVisibility::Public);
 });
 
 test('自分のドキュメントは表示できる', function () {
@@ -58,6 +60,41 @@ test('自分のドキュメントは表示できる', function () {
             ->where('can.delete', true));
 });
 
+test('指定した公開範囲で作成されたドキュメントは詳細画面でも同じ公開範囲になる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.visibility', DocumentVisibility::Unlisted->value));
+});
+
+test('指定した公開範囲に編集されたドキュメントは詳細画面でも同じ公開範囲になる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('documents.update', $document), [
+            'title' => $document->title,
+            'content' => $document->content,
+            'visibility' => DocumentVisibility::Public->value,
+        ])
+        ->assertRedirect(route('documents.show', $document));
+
+    $this->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.visibility', DocumentVisibility::Public->value));
+});
+
 test('自分のドキュメントは変更や削除ができる', function () {
     $user = User::factory()->create();
     $document = Document::factory()->for($user)->create();
@@ -66,12 +103,14 @@ test('自分のドキュメントは変更や削除ができる', function () {
         ->put(route('documents.update', $document), [
             'title' => '変更後のタイトル',
             'content' => '変更後の本文',
+            'visibility' => DocumentVisibility::Unlisted->value,
         ])
         ->assertRedirect(route('documents.show', $document));
 
     expect($document->fresh())
         ->title->toBe('変更後のタイトル')
-        ->content->toBe('変更後の本文');
+        ->content->toBe('変更後の本文')
+        ->visibility->toBe(DocumentVisibility::Unlisted);
 
     $this->delete(route('documents.destroy', $document))
         ->assertRedirect(route('documents.index'));
@@ -93,6 +132,7 @@ test('他のユーザーのドキュメントは表示や変更や削除がで�
     $this->put(route('documents.update', $document), [
         'title' => '変更後のタイトル',
         'content' => '変更後の本文',
+        'visibility' => DocumentVisibility::Public->value,
     ])->assertForbidden();
     $this->delete(route('documents.destroy', $document))->assertForbidden();
 
@@ -125,6 +165,22 @@ test('他のユーザーの公開ドキュメントは表示できるが変更�
     $this->put(route('documents.update', $document), [
         'title' => '変更後のタイトル',
         'content' => '変更後の本文',
+        'visibility' => DocumentVisibility::Private->value,
     ])->assertForbidden();
     $this->delete(route('documents.destroy', $document))->assertForbidden();
+});
+
+test('公開範囲には定義済みの値だけを指定できる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->put(route('documents.update', $document), [
+            'title' => '変更後のタイトル',
+            'content' => '変更後の本文',
+            'visibility' => 'invalid',
+        ])
+        ->assertSessionHasErrors('visibility');
+
+    expect($document->fresh()->visibility)->toBe(DocumentVisibility::Private);
 });

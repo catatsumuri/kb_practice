@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -19,7 +21,7 @@ class DocumentController extends Controller
         Gate::authorize('viewAny', Document::class);
 
         $documents = $request->user()->documents()
-            ->select(['id', 'user_id', 'title', 'created_at'])
+            ->select(['id', 'user_id', 'title', 'visibility', 'created_at'])
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -47,8 +49,9 @@ class DocumentController extends Controller
         Gate::authorize('create', Document::class);
 
         $validated = $request->validate([
-            'title' => ['required'],
-            'content' => ['required'],
+            'title' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string'],
+            'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
         ]);
 
         $request->user()->documents()->create($validated);
@@ -101,6 +104,7 @@ class DocumentController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
+            'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
         ]);
 
         $document->update($validated);

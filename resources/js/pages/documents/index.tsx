@@ -4,6 +4,7 @@ import {
     index,
     show,
 } from '@/actions/App/Http/Controllers/DocumentController';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -13,9 +14,18 @@ import {
 } from '@/components/ui/card';
 import { formatDate } from '@/lib/utils';
 
-import type { DocumentWithUser } from '@/types';
+import type { DocumentVisibility, DocumentWithUser } from '@/types';
 type DocumentsProps = {
-    documents: Pick<DocumentWithUser, 'id' | 'title' | 'created_at' | 'user'>[];
+    documents: Pick<
+        DocumentWithUser,
+        'id' | 'title' | 'visibility' | 'created_at' | 'user'
+    >[];
+};
+
+const visibilityLabels: Record<DocumentVisibility, string> = {
+    private: '非公開',
+    unlisted: '限定公開',
+    public: '公開',
 };
 
 export default function Documents({ documents: documentList }: DocumentsProps) {
@@ -57,6 +67,16 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
                                                 <CardTitle>
                                                     {document.title}
                                                 </CardTitle>
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="w-fit"
+                                                >
+                                                    {
+                                                        visibilityLabels[
+                                                            document.visibility
+                                                        ]
+                                                    }
+                                                </Badge>
                                                 <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
                                                     <span>
                                                         作成者：

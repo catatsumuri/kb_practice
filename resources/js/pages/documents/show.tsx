@@ -7,6 +7,7 @@ import {
     index,
     show,
 } from '@/actions/App/Http/Controllers/DocumentController';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -27,7 +28,13 @@ import {
 import { formatDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
-import type { DocumentWithUser } from '@/types';
+import type { DocumentVisibility, DocumentWithUser } from '@/types';
+
+const visibilityLabels: Record<DocumentVisibility, string> = {
+    private: '非公開',
+    unlisted: '限定公開',
+    public: '公開',
+};
 
 type ShowDocumentProps = {
     document: DocumentWithUser;
@@ -127,7 +134,12 @@ export default function ShowDocument({ document, can }: ShowDocumentProps) {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>{document.title}</CardTitle>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CardTitle>{document.title}</CardTitle>
+                            <Badge variant="secondary">
+                                {visibilityLabels[document.visibility]}
+                            </Badge>
+                        </div>
                         <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
                             <span>作成者：{document.user.name}</span>
                             <time dateTime={document.created_at}>
