@@ -26,6 +26,14 @@ class DocumentPolicy
     }
 
     /**
+     * Determine whether the user can like the model.
+     */
+    public function like(User $user, Document $document): bool
+    {
+        return $this->view($user, $document);
+    }
+
+    /**
      * Determine whether the user can create models.
      */
     public function create(User $user): bool

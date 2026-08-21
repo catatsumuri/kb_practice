@@ -1,4 +1,5 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Heart } from 'lucide-react';
 import {
     create,
     index,
@@ -16,10 +17,10 @@ import { formatDate } from '@/lib/utils';
 
 import type { DocumentVisibility, DocumentWithUser } from '@/types';
 type DocumentsProps = {
-    documents: Pick<
+    documents: (Pick<
         DocumentWithUser,
         'id' | 'title' | 'visibility' | 'created_at' | 'user'
-    >[];
+    > & { likes_count: number })[];
 };
 
 const visibilityLabels: Record<DocumentVisibility, string> = {
@@ -92,6 +93,10 @@ export default function Documents({ documents: documentList }: DocumentsProps) {
                                                         )}
                                                     </time>
                                                 </CardDescription>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+                                                <Heart className="size-4" />
+                                                {document.likes_count}
                                             </div>
                                         </CardHeader>
                                     </Card>

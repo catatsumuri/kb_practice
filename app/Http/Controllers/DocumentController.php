@@ -22,6 +22,7 @@ class DocumentController extends Controller
 
         $documents = $request->user()->documents()
             ->select(['id', 'user_id', 'title', 'visibility', 'created_at'])
+            ->withCount('likes')
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -67,7 +68,7 @@ class DocumentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Document $document): Response
+    public function show(Request $request, Document $document): Response
     {
         Gate::authorize('view', $document);
 
@@ -75,6 +76,8 @@ class DocumentController extends Controller
 
         return Inertia::render('documents/show', [
             'document' => $document,
+            'likesCount' => $document->likes()->count(),
+            'liked' => $document->likes()->where('user_id', $request->user()->id)->exists(),
             'can' => [
                 'update' => Gate::allows('update', $document),
                 'delete' => Gate::allows('delete', $document),

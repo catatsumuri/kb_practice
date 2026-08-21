@@ -29,6 +29,23 @@ test('一覧には自分のドキュメントのみ表示される', function ()
             ->where('documents.0.id', $ownDocument->id));
 });
 
+test('一覧にはいいねの数が表示される', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+
+    $likers = User::factory()->count(2)->create();
+    foreach ($likers as $liker) {
+        $document->likes()->create(['user_id' => $liker->id]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('documents.index'))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/index')
+            ->where('documents.0.likes_count', 2));
+});
+
 test('作成したドキュメントはログインユーザーに紐づく', function () {
     $user = User::factory()->create();
 

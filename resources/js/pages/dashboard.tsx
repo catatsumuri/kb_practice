@@ -1,5 +1,6 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Heart } from 'lucide-react';
 import { show } from '@/actions/App/Http/Controllers/DocumentController';
 import {
     Card,
@@ -12,7 +13,10 @@ import { dashboard } from '@/routes';
 import type { DocumentWithUser } from '@/types';
 
 type DashboardProps = {
-    documents: Pick<DocumentWithUser, 'id' | 'title' | 'created_at' | 'user'>[];
+    documents: (Pick<
+        DocumentWithUser,
+        'id' | 'title' | 'created_at' | 'user'
+    > & { likes_count: number })[];
 };
 
 export default function Dashboard({ documents }: DashboardProps) {
@@ -61,24 +65,31 @@ export default function Dashboard({ documents }: DashboardProps) {
                                     prefetch
                                 >
                                     <Card className="h-full transition-colors hover:bg-muted/50">
-                                        <CardHeader>
-                                            <CardTitle className="line-clamp-2 leading-snug">
-                                                {document.title}
-                                            </CardTitle>
-                                            <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
-                                                <span>
-                                                    作成者：{document.user.name}
-                                                </span>
-                                                <time
-                                                    dateTime={
-                                                        document.created_at
-                                                    }
-                                                >
-                                                    {formatDate(
-                                                        document.created_at,
-                                                    )}
-                                                </time>
-                                            </CardDescription>
+                                        <CardHeader className="flex-row items-start justify-between gap-4">
+                                            <div className="grid gap-1.5">
+                                                <CardTitle className="line-clamp-2 leading-snug">
+                                                    {document.title}
+                                                </CardTitle>
+                                                <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
+                                                    <span>
+                                                        作成者：
+                                                        {document.user.name}
+                                                    </span>
+                                                    <time
+                                                        dateTime={
+                                                            document.created_at
+                                                        }
+                                                    >
+                                                        {formatDate(
+                                                            document.created_at,
+                                                        )}
+                                                    </time>
+                                                </CardDescription>
+                                            </div>
+                                            <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+                                                <Heart className="size-4" />
+                                                {document.likes_count}
+                                            </div>
                                         </CardHeader>
                                     </Card>
                                 </Link>

@@ -17,6 +17,7 @@ class DashboardController extends Controller
         $documents = Document::query()
             ->select(['id', 'user_id', 'title', 'created_at'])
             ->where('visibility', DocumentVisibility::Public)
+            ->withCount('likes')
             ->with('user:id,name')
             ->latest()
             ->get();
