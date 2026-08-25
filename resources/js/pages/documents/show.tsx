@@ -1,5 +1,5 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { Heart } from 'lucide-react';
+import { Check, Copy, Heart } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -23,32 +23,22 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { cn, formatDate } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DocumentMeta } from '@/components/document-meta';
+import { Input } from '@/components/ui/input';
+import { useClipboard } from '@/hooks/use-clipboard';
+import { visibilityLabels } from '@/lib/document';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
-import type { DocumentVisibility, DocumentWithUser } from '@/types';
-
-const visibilityLabels: Record<DocumentVisibility, string> = {
-    private: '非公開',
-    unlisted: '限定公開',
-    public: '公開',
-};
+import type { DocumentPermissions, DocumentWithUser } from '@/types';
 
 type ShowDocumentProps = {
     document: DocumentWithUser;
     likesCount: number;
     liked: boolean;
-    can: {
-        update: boolean;
-        delete: boolean;
-    };
+    can: DocumentPermissions;
+    shareUrl: string | null;
 };
 
 export default function ShowDocument({
@@ -56,8 +46,11 @@ export default function ShowDocument({
     likesCount,
     liked,
     can,
+    shareUrl,
 }: ShowDocumentProps) {
     const returnRoute = can.update ? index() : dashboard();
+    const [copiedText, copy] = useClipboard();
+    const CopyIcon = copiedText === shareUrl ? Check : Copy;
 
     function toggleLike() {
         const nextLiked = !liked;
@@ -189,14 +182,32 @@ export default function ShowDocument({
                                 {visibilityLabels[document.visibility]}
                             </Badge>
                         </div>
-                        <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
-                            <span>作成者：{document.user.name}</span>
-                            <time dateTime={document.created_at}>
-                                {formatDate(document.created_at)}
-                            </time>
-                        </CardDescription>
+                        <DocumentMeta
+                            author={document.user.name}
+                            createdAt={document.created_at}
+                        />
                     </CardHeader>
                     <CardContent>
+                        {shareUrl && (
+                            <div className="mb-4 flex flex-wrap items-center gap-2">
+                                <Input
+                                    type="text"
+                                    readOnly
+                                    value={shareUrl}
+                                    onFocus={(event) => event.target.select()}
+                                    className="max-w-md"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => copy(shareUrl)}
+                                >
+                                    <CopyIcon />
+                                </Button>
+                            </div>
+                        )}
+
                         <div className="markdown-content">
                             <Markdown remarkPlugins={[remarkGfm]}>
                                 {document.content}

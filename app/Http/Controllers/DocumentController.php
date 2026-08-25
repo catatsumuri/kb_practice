@@ -7,6 +7,7 @@ use App\Models\Document;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -72,17 +73,42 @@ class DocumentController extends Controller
     {
         Gate::authorize('view', $document);
 
-        $document->load('user:id,name');
-
         return Inertia::render('documents/show', [
-            'document' => $document,
-            'likesCount' => $document->likes()->count(),
+            ...$this->forDisplay($document),
             'liked' => $document->likes()->where('user_id', $request->user()->id)->exists(),
             'can' => [
                 'update' => Gate::allows('update', $document),
                 'delete' => Gate::allows('delete', $document),
             ],
+            'shareUrl' => $document->visibility === DocumentVisibility::Unlisted
+                ? URL::signedRoute('documents.shared', ['document' => $document])
+                : null,
         ]);
+    }
+
+    /**
+     * Display a document via its permanent signed share link, without requiring authentication.
+     */
+    public function shared(Document $document): Response
+    {
+        abort_unless($document->visibility === DocumentVisibility::Unlisted, 404);
+
+        return Inertia::render('documents/shared', $this->forDisplay($document));
+    }
+
+    /**
+     * Load the document's author and like count shared by the show and shared views.
+     *
+     * @return array{document: Document, likesCount: int}
+     */
+    private function forDisplay(Document $document): array
+    {
+        $document->load('user:id,name');
+
+        return [
+            'document' => $document,
+            'likesCount' => $document->likes()->count(),
+        ];
     }
 
     /**

@@ -4,6 +4,7 @@ use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -185,6 +186,96 @@ test('他のユーザーの公開ドキュメントは表示できるが変更�
         'visibility' => DocumentVisibility::Private->value,
     ])->assertForbidden();
     $this->delete(route('documents.destroy', $document))->assertForbidden();
+});
+
+test('ゲストは有効な共有リンクで限定公開ドキュメントを閲覧できる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
+
+    $this->get($shareUrl)
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/shared')
+            ->where('document.id', $document->id));
+});
+
+test('署名が不正な共有リンクではドキュメントを閲覧できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+    $otherDocument = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
+    $tamperedUrl = str_replace(
+        "documents/{$document->id}/shared",
+        "documents/{$otherDocument->id}/shared",
+        $shareUrl,
+    );
+
+    $this->get($tamperedUrl)->assertForbidden();
+});
+
+test('限定公開以外のドキュメントは共有リンクでは閲覧できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
+
+    $document->update(['visibility' => DocumentVisibility::Private]);
+
+    $this->get($shareUrl)->assertNotFound();
+});
+
+test('限定公開ドキュメントの詳細画面には共有リンクが含まれる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('shareUrl', URL::signedRoute('documents.shared', ['document' => $document])));
+});
+
+test('非公開・公開ドキュメントの詳細画面には共有リンクが含まれない', function () {
+    $user = User::factory()->create();
+
+    $privateDocument = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Private,
+    ]);
+    $publicDocument = Document::factory()->for($user)->create([
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->actingAs($user);
+
+    $this->get(route('documents.show', $privateDocument))
+        ->assertInertia(fn (Assert $page) => $page->where('shareUrl', null));
+    $this->get(route('documents.show', $publicDocument))
+        ->assertInertia(fn (Assert $page) => $page->where('shareUrl', null));
+});
+
+test('他のログインユーザーは限定公開ドキュメントを通常の詳細画面からは閲覧できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->create([
+        'visibility' => DocumentVisibility::Unlisted,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show', $document))
+        ->assertForbidden();
 });
 
 test('公開範囲には定義済みの値だけを指定できる', function () {

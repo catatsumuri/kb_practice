@@ -2,21 +2,21 @@ import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Heart } from 'lucide-react';
 import { show } from '@/actions/App/Http/Controllers/DocumentController';
+import { DocumentMeta } from '@/components/document-meta';
 import {
     Card,
     CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { formatDate } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import type { DocumentWithUser } from '@/types';
+import type { DocumentListItem } from '@/types';
 
 type DashboardProps = {
-    documents: (Pick<
-        DocumentWithUser,
-        'id' | 'title' | 'created_at' | 'user'
-    > & { likes_count: number })[];
+    documents: Pick<
+        DocumentListItem,
+        'id' | 'title' | 'created_at' | 'user' | 'likes_count'
+    >[];
 };
 
 export default function Dashboard({ documents }: DashboardProps) {
@@ -70,21 +70,12 @@ export default function Dashboard({ documents }: DashboardProps) {
                                                 <CardTitle className="line-clamp-2 leading-snug">
                                                     {document.title}
                                                 </CardTitle>
-                                                <CardDescription className="flex flex-wrap gap-x-3 gap-y-1">
-                                                    <span>
-                                                        作成者：
-                                                        {document.user.name}
-                                                    </span>
-                                                    <time
-                                                        dateTime={
-                                                            document.created_at
-                                                        }
-                                                    >
-                                                        {formatDate(
-                                                            document.created_at,
-                                                        )}
-                                                    </time>
-                                                </CardDescription>
+                                                <DocumentMeta
+                                                    author={document.user.name}
+                                                    createdAt={
+                                                        document.created_at
+                                                    }
+                                                />
                                             </div>
                                             <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
                                                 <Heart className="size-4" />

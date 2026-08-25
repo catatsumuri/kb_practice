@@ -13,3 +13,12 @@ export type Document = {
 export type DocumentWithUser = Document & {
     user: Pick<User, 'id' | 'name'>;
 };
+
+export type DocumentListItem = DocumentWithUser & {
+    likes_count: number;
+};
+
+export type DocumentPermissions = {
+    update: boolean;
+    delete: boolean;
+};
