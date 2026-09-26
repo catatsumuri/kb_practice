@@ -17,6 +17,11 @@ return new class extends Migration
             $table->string('title');
             $table->longText('content');
             $table->string('visibility')->default('private')->index();
+            $table->string('document_type')->default('original')->index();
+            $table->string('source_title')->nullable();
+            $table->string('source_url')->nullable();
+            $table->string('source_author')->nullable();
+            $table->longText('source_content')->nullable();
             $table->timestamps();
         });
     }

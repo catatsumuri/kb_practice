@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'content', 'visibility'])]
+#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */
@@ -23,6 +24,7 @@ class Document extends Model
      */
     protected $attributes = [
         'visibility' => 'private',
+        'document_type' => 'original',
     ];
 
     /**
@@ -34,6 +36,7 @@ class Document extends Model
     {
         return [
             'visibility' => DocumentVisibility::class,
+            'document_type' => DocumentType::class,
         ];
     }
 

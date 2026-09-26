@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
@@ -55,5 +56,16 @@ class DatabaseSeeder extends Seeder
                 ])
                 ->create();
         }
+
+        Document::factory()->for($users[0])->create([
+            'title' => 'はじめに（TypeSafe AI ドキュメント日本語訳）',
+            'content' => File::get(database_path('seeders/sample-translation.md')),
+            'visibility' => DocumentVisibility::Public,
+            'document_type' => DocumentType::Translation,
+            'source_title' => 'Introduction',
+            'source_url' => 'https://docs.typesafe.ai/introduction.md',
+            'source_author' => 'TypeSafe',
+            'source_content' => File::get(database_path('seeders/sample-source.md')),
+        ]);
     }
 }

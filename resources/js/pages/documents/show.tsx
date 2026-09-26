@@ -1,5 +1,7 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
-import { Check, Copy, Heart } from 'lucide-react';
+import { lang } from '@erag/lang-sync-inertia/react';
+import { Check, ChevronDown, Copy, Heart } from 'lucide-react';
+import { useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -48,9 +50,12 @@ export default function ShowDocument({
     can,
     shareUrl,
 }: ShowDocumentProps) {
+    const { __ } = lang();
     const returnRoute = can.update ? index() : dashboard();
     const [copiedText, copy] = useClipboard();
     const CopyIcon = copiedText === shareUrl ? Check : Copy;
+    const [showSource, setShowSource] = useState(false);
+    const hasSource = Boolean(document.source_content);
 
     function toggleLike() {
         const nextLiked = !liked;
@@ -175,7 +180,7 @@ export default function ShowDocument({
                 </div>
 
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="sticky top-0 z-20 border-b bg-card py-4">
                         <div className="flex flex-wrap items-center gap-2">
                             <CardTitle>{document.title}</CardTitle>
                             <Badge variant="secondary">
@@ -186,6 +191,49 @@ export default function ShowDocument({
                             author={document.user.name}
                             createdAt={document.created_at}
                         />
+                        {document.source_url && (
+                            <p className="text-sm text-muted-foreground">
+                                {__('Translated from:')}{' '}
+                                <a
+                                    href={document.source_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline"
+                                >
+                                    {document.source_title ??
+                                        document.source_url}
+                                </a>
+                                {document.source_author && (
+                                    <>
+                                        {' '}
+                                        {__('(:author)', {
+                                            author: document.source_author,
+                                        })}
+                                    </>
+                                )}
+                                {hasSource && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="ml-2 h-auto gap-1 px-2 py-0.5"
+                                        onClick={() =>
+                                            setShowSource((open) => !open)
+                                        }
+                                    >
+                                        <ChevronDown
+                                            className={cn(
+                                                'size-4 transition-transform',
+                                                showSource && 'rotate-180',
+                                            )}
+                                        />
+                                        {showSource
+                                            ? __('Hide original')
+                                            : __('Show original')}
+                                    </Button>
+                                )}
+                            </p>
+                        )}
                     </CardHeader>
                     <CardContent>
                         {shareUrl && (
@@ -208,11 +256,36 @@ export default function ShowDocument({
                             </div>
                         )}
 
-                        <div className="markdown-content">
-                            <Markdown remarkPlugins={[remarkGfm]}>
-                                {document.content}
-                            </Markdown>
-                        </div>
+                        {hasSource && showSource ? (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div className="rounded-md border">
+                                    <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                        {__('Translation')}
+                                    </p>
+                                    <div className="markdown-content p-4">
+                                        <Markdown remarkPlugins={[remarkGfm]}>
+                                            {document.content}
+                                        </Markdown>
+                                    </div>
+                                </div>
+                                <div className="rounded-md border">
+                                    <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                        {__('Original')}
+                                    </p>
+                                    <div className="markdown-content p-4">
+                                        <Markdown remarkPlugins={[remarkGfm]}>
+                                            {document.source_content}
+                                        </Markdown>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="markdown-content">
+                                <Markdown remarkPlugins={[remarkGfm]}>
+                                    {document.content}
+                                </Markdown>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </main>
