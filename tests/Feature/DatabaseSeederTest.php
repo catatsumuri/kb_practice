@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
@@ -7,28 +8,21 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('各テストユーザーに公開範囲を変えた10件のサンプルドキュメントを作成する', function () {
+test('2人のテストユーザーとTypeSafeドキュメントの翻訳サンプルを1件作成する', function () {
     $this->seed();
 
-    $users = User::query()->with('documents')->orderBy('id')->get();
+    $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(20)
-        ->and(Document::query()->distinct()->pluck('content'))->toHaveCount(1);
+        ->and(Document::query()->count())->toBe(1);
 
-    foreach ($users as $user) {
-        expect($user->documents)->toHaveCount(10)
-            ->and($user->documents->pluck('visibility')->unique()->values()->all())->toEqualCanonicalizing(DocumentVisibility::cases())
-            ->and($user->documents->pluck('title')->unique())->toHaveCount(10);
+    $document = Document::query()->sole();
 
-        foreach ($user->documents as $document) {
-            $visibilityLabel = match ($document->visibility) {
-                DocumentVisibility::Private => '非公開',
-                DocumentVisibility::Public => '公開',
-                DocumentVisibility::Unlisted => '限定公開',
-            };
-
-            expect($document->title)->toContain("（{$visibilityLabel}）");
-        }
-    }
+    expect($document->user_id)->toBe($users->first()->id)
+        ->and($document->visibility)->toBe(DocumentVisibility::Public)
+        ->and($document->document_type)->toBe(DocumentType::Translation)
+        ->and($document->source_title)->toBe('Introduction')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/introduction.md')
+        ->and($document->source_author)->toBe('TypeSafe')
+        ->and($document->source_content)->not->toBeEmpty();
 });
