@@ -1,7 +1,15 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
-import { Check, ChevronDown, Copy, Heart } from 'lucide-react';
-import { useState } from 'react';
+import { extractMarkdownHeadings } from '@catatsumuri/inkstream';
+import {
+    Check,
+    ChevronDown,
+    Copy,
+    Heart,
+    PanelRightClose,
+    PanelRightOpen,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -25,11 +33,12 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
 import { Input } from '@/components/ui/input';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { visibilityLabels } from '@/lib/document';
+import { headingComponents } from '@/lib/markdown-headings';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -56,6 +65,11 @@ export default function ShowDocument({
     const CopyIcon = copiedText === shareUrl ? Check : Copy;
     const [showSource, setShowSource] = useState(false);
     const hasSource = Boolean(document.source_content);
+    const [showToc, setShowToc] = useState(true);
+    const headings = useMemo(
+        () => extractMarkdownHeadings(document.content),
+        [document.content],
+    );
 
     function toggleLike() {
         const nextLiked = !liked;
@@ -180,61 +194,6 @@ export default function ShowDocument({
                 </div>
 
                 <Card>
-                    <CardHeader className="sticky top-0 z-20 border-b bg-card py-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <CardTitle>{document.title}</CardTitle>
-                            <Badge variant="secondary">
-                                {visibilityLabels[document.visibility]}
-                            </Badge>
-                        </div>
-                        <DocumentMeta
-                            author={document.user.name}
-                            createdAt={document.created_at}
-                        />
-                        {document.source_url && (
-                            <p className="text-sm text-muted-foreground">
-                                {__('Translated from:')}{' '}
-                                <a
-                                    href={document.source_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline"
-                                >
-                                    {document.source_title ??
-                                        document.source_url}
-                                </a>
-                                {document.source_author && (
-                                    <>
-                                        {' '}
-                                        {__('(:author)', {
-                                            author: document.source_author,
-                                        })}
-                                    </>
-                                )}
-                                {hasSource && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="ml-2 h-auto gap-1 px-2 py-0.5"
-                                        onClick={() =>
-                                            setShowSource((open) => !open)
-                                        }
-                                    >
-                                        <ChevronDown
-                                            className={cn(
-                                                'size-4 transition-transform',
-                                                showSource && 'rotate-180',
-                                            )}
-                                        />
-                                        {showSource
-                                            ? __('Hide original')
-                                            : __('Show original')}
-                                    </Button>
-                                )}
-                            </p>
-                        )}
-                    </CardHeader>
                     <CardContent>
                         {shareUrl && (
                             <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -256,36 +215,195 @@ export default function ShowDocument({
                             </div>
                         )}
 
-                        {hasSource && showSource ? (
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <div className="rounded-md border">
-                                    <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
-                                        {__('Translation')}
-                                    </p>
-                                    <div className="markdown-content p-4">
-                                        <Markdown remarkPlugins={[remarkGfm]}>
+                        <div className="lg:flex lg:items-start lg:gap-6">
+                            <div className="min-w-0 lg:flex-1">
+                                {hasSource && showSource ? (
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="rounded-md border">
+                                            <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                                {__('Translation')}
+                                            </p>
+                                            <div className="markdown-content p-4">
+                                                <Markdown
+                                                    remarkPlugins={[
+                                                        remarkGfm,
+                                                    ]}
+                                                    components={
+                                                        headingComponents
+                                                    }
+                                                >
+                                                    {document.content}
+                                                </Markdown>
+                                            </div>
+                                        </div>
+                                        <div className="rounded-md border">
+                                            <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                                {__('Original')}
+                                            </p>
+                                            <div className="markdown-content p-4">
+                                                <Markdown
+                                                    remarkPlugins={[
+                                                        remarkGfm,
+                                                    ]}
+                                                >
+                                                    {
+                                                        document.source_content
+                                                    }
+                                                </Markdown>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="markdown-content">
+                                        <Markdown
+                                            remarkPlugins={[remarkGfm]}
+                                            components={headingComponents}
+                                        >
                                             {document.content}
                                         </Markdown>
                                     </div>
-                                </div>
-                                <div className="rounded-md border">
-                                    <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
-                                        {__('Original')}
-                                    </p>
-                                    <div className="markdown-content p-4">
-                                        <Markdown remarkPlugins={[remarkGfm]}>
-                                            {document.source_content}
-                                        </Markdown>
+                                )}
+                            </div>
+
+                            <aside
+                                className="mt-4 self-start overflow-y-auto lg:sticky lg:top-4 lg:mt-0 lg:w-80 lg:flex-shrink-0"
+                                style={{
+                                    maxHeight: 'calc(100vh - 2rem)',
+                                }}
+                            >
+                                <div className="flex flex-col gap-4">
+                                    <div className="rounded-md border p-4">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <CardTitle>
+                                                {document.title}
+                                            </CardTitle>
+                                            <Badge variant="secondary">
+                                                {
+                                                    visibilityLabels[
+                                                        document.visibility
+                                                    ]
+                                                }
+                                            </Badge>
+                                        </div>
+                                        <DocumentMeta
+                                            author={document.user.name}
+                                            createdAt={document.created_at}
+                                        />
+                                        {document.source_url && (
+                                            <p className="mt-2 text-sm text-muted-foreground">
+                                                {__('Translated from:')}{' '}
+                                                <a
+                                                    href={document.source_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="underline"
+                                                >
+                                                    {document.source_title ??
+                                                        document.source_url}
+                                                </a>
+                                                {document.source_author && (
+                                                    <>
+                                                        {' '}
+                                                        {__('(:author)', {
+                                                            author: document.source_author,
+                                                        })}
+                                                    </>
+                                                )}
+                                            </p>
+                                        )}
+                                        {hasSource && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="-ml-2 mt-1 h-auto w-fit gap-1 px-2 py-0.5"
+                                                onClick={() =>
+                                                    setShowSource(
+                                                        (open) => !open,
+                                                    )
+                                                }
+                                            >
+                                                {showSource ? (
+                                                    <PanelRightClose className="size-4" />
+                                                ) : (
+                                                    <PanelRightOpen className="size-4" />
+                                                )}
+                                                {showSource
+                                                    ? __('Hide original')
+                                                    : __('Show original')}
+                                            </Button>
+                                        )}
+                                        {headings.length > 0 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="-ml-2 mt-1 h-auto w-fit gap-1 px-2 py-0.5"
+                                                onClick={() =>
+                                                    setShowToc(
+                                                        (open) => !open,
+                                                    )
+                                                }
+                                            >
+                                                <ChevronDown
+                                                    className={cn(
+                                                        'size-4 transition-transform',
+                                                        showToc &&
+                                                            'rotate-180',
+                                                    )}
+                                                />
+                                                {showToc
+                                                    ? __(
+                                                          'Hide table of contents',
+                                                      )
+                                                    : __(
+                                                          'Show table of contents',
+                                                      )}
+                                            </Button>
+                                        )}
                                     </div>
+
+                                    {showToc && headings.length > 0 && (
+                                        <nav className="rounded-md border p-4 text-sm">
+                                            <p className="mb-2 font-semibold text-foreground">
+                                                {__('Contents')}
+                                            </p>
+                                            <ul className="space-y-1">
+                                                {headings.map((heading) => (
+                                                    <li
+                                                        key={heading.id}
+                                                        style={{
+                                                            paddingLeft: `${(heading.level - 1) * 12}px`,
+                                                        }}
+                                                    >
+                                                        <a
+                                                            href={`#${encodeURIComponent(heading.id)}`}
+                                                            onClick={(
+                                                                event,
+                                                            ) => {
+                                                                event.preventDefault();
+                                                                window.document
+                                                                    .getElementById(
+                                                                        heading.id,
+                                                                    )
+                                                                    ?.scrollIntoView(
+                                                                        {
+                                                                            block: 'start',
+                                                                        },
+                                                                    );
+                                                            }}
+                                                            className="block rounded px-1 py-0.5 text-muted-foreground hover:text-foreground"
+                                                        >
+                                                            {heading.text}
+                                                        </a>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </nav>
+                                    )}
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="markdown-content">
-                                <Markdown remarkPlugins={[remarkGfm]}>
-                                    {document.content}
-                                </Markdown>
-                            </div>
-                        )}
+                            </aside>
+                        </div>
                     </CardContent>
                 </Card>
             </main>
