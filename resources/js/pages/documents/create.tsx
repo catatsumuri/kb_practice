@@ -4,9 +4,15 @@ import {
     index,
     store,
 } from '@/actions/App/Http/Controllers/DocumentController';
-import { DocumentForm } from '@/components/document-form';
+import { DocumentForm, type FetchedSource } from '@/components/document-form';
 
-export default function CreateDocument() {
+type CreateDocumentProps = {
+    fetchedSource?: FetchedSource | null;
+};
+
+export default function CreateDocument({
+    fetchedSource,
+}: CreateDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -31,6 +37,8 @@ export default function CreateDocument() {
                     form={store.form()}
                     cancelHref={index()}
                     submitLabel="保存"
+                    allowSourceFetch
+                    fetchedSource={fetchedSource}
                 />
             </main>
         </>

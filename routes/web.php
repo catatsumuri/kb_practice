@@ -13,6 +13,7 @@ Route::get('documents/{document}/shared', [DocumentController::class, 'shared'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::post('documents/fetch-source', [DocumentController::class, 'fetchSource'])->name('documents.fetch-source');
     Route::resource('documents', DocumentController::class);
     Route::post('documents/{document}/likes', [DocumentLikeController::class, 'store'])->name('documents.likes.store');
     Route::delete('documents/{document}/likes', [DocumentLikeController::class, 'destroy'])->name('documents.likes.destroy');

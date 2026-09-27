@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -54,7 +57,15 @@ class DocumentController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
+            'source_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'source_title' => ['nullable', 'string', 'max:255'],
+            'source_author' => ['nullable', 'string', 'max:255'],
+            'source_content' => ['nullable', 'string'],
         ]);
+
+        $validated['document_type'] = filled($validated['source_url'] ?? null)
+            ? DocumentType::Translation
+            : DocumentType::Original;
 
         $request->user()->documents()->create($validated);
 
@@ -64,6 +75,61 @@ class DocumentController extends Controller
         ]);
 
         return to_route('documents.index');
+    }
+
+    /**
+     * Fetch the content at a source URL so it can be used as the starting
+     * point for a translation, without leaving the create form.
+     */
+    public function fetchSource(Request $request): Response
+    {
+        Gate::authorize('create', Document::class);
+
+        $validated = $request->validate([
+            'source_url' => ['required', 'url:http,https', 'max:2048'],
+        ]);
+
+        $this->assertUrlIsFetchable($validated['source_url']);
+
+        try {
+            $content = Http::timeout(10)->get($validated['source_url'])->throw()->body();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'source_url' => '指定のURLから本文を取得できませんでした。',
+            ]);
+        }
+
+        $sourceTitle = null;
+
+        if (preg_match('/^#\s+(.+)$/m', $content, $matches) === 1) {
+            $sourceTitle = trim($matches[1]);
+        }
+
+        return Inertia::render('documents/create', [
+            'fetchedSource' => [
+                'source_url' => $validated['source_url'],
+                'source_title' => $sourceTitle,
+                'content' => $content,
+            ],
+        ]);
+    }
+
+    /**
+     * Reject hosts that resolve to private, loopback, or otherwise reserved
+     * IP ranges, so this can't be used to probe the server's internal network.
+     */
+    private function assertUrlIsFetchable(string $url): void
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        $ip = $host !== null && filter_var($host, FILTER_VALIDATE_IP)
+            ? $host
+            : gethostbyname((string) $host);
+
+        if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            throw ValidationException::withMessages([
+                'source_url' => 'このURLからは取得できません。',
+            ]);
+        }
     }
 
     /**
