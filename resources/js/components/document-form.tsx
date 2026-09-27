@@ -1,6 +1,6 @@
 import { Form, Link, router } from '@inertiajs/react';
 import { Download, PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { fetchSource } from '@/actions/App/Http/Controllers/DocumentController';
 import InputError from '@/components/input-error';
@@ -80,6 +80,28 @@ export function DocumentForm({
     const [showSourcePreview, setShowSourcePreview] = useState(
         Boolean(defaultValues?.source_content),
     );
+    const [contentHeight, setContentHeight] = useState<number | null>(null);
+
+    // The content textarea auto-grows to fit whatever the user is typing
+    // (field-sizing: content), so its height isn't known up front. Mirror
+    // that height onto the read-only source preview so the two columns
+    // line up instead of each auto-sizing to its own text independently.
+    useLayoutEffect(() => {
+        const content = contentRef.current;
+
+        if (!content || !showSourcePreview) {
+            return;
+        }
+
+        const updateHeight = () => setContentHeight(content.offsetHeight);
+
+        updateHeight();
+
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(content);
+
+        return () => observer.disconnect();
+    }, [showSourcePreview]);
 
     useEffect(() => {
         if (!fetchedSource) {
@@ -288,11 +310,8 @@ export function DocumentForm({
                             </div>
 
                             <div className="grid gap-2">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <Label htmlFor="content">
-                                        本文（Markdown）
-                                    </Label>
-                                    {allowSourceFetch && sourceContent && (
+                                {allowSourceFetch && sourceContent && (
+                                    <div className="flex justify-end">
                                         <Button
                                             type="button"
                                             variant="ghost"
@@ -313,11 +332,28 @@ export function DocumentForm({
                                                 ? '原文を非表示'
                                                 : '原文を表示'}
                                         </Button>
+                                    </div>
+                                )}
+                                <div
+                                    className={cn(
+                                        'grid gap-4',
+                                        showSourcePreview &&
+                                            sourceContent &&
+                                            'lg:grid-cols-2',
+                                    )}
+                                >
+                                    <Label htmlFor="content">
+                                        本文（Markdown）
+                                    </Label>
+                                    {showSourcePreview && sourceContent && (
+                                        <Label htmlFor="source_content_preview">
+                                            原文（参照用）
+                                        </Label>
                                     )}
                                 </div>
                                 <div
                                     className={cn(
-                                        'grid gap-4',
+                                        'grid items-start gap-4',
                                         showSourcePreview &&
                                             sourceContent &&
                                             'lg:grid-cols-2',
@@ -333,17 +369,17 @@ export function DocumentForm({
                                         className="min-h-80 resize-y font-mono leading-6"
                                     />
                                     {showSourcePreview && sourceContent && (
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="source_content_preview">
-                                                原文（参照用）
-                                            </Label>
-                                            <Textarea
-                                                id="source_content_preview"
-                                                readOnly
-                                                value={sourceContent}
-                                                className="min-h-80 resize-y bg-muted/30 font-mono leading-6"
-                                            />
-                                        </div>
+                                        <Textarea
+                                            id="source_content_preview"
+                                            readOnly
+                                            value={sourceContent}
+                                            className="min-h-80 field-sizing-fixed resize-none overflow-y-auto bg-muted/30 font-mono leading-6"
+                                            style={
+                                                contentHeight
+                                                    ? { height: contentHeight }
+                                                    : undefined
+                                            }
+                                        />
                                     )}
                                 </div>
                                 <p
