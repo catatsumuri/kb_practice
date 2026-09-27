@@ -1,5 +1,10 @@
 import { Form, Link, router } from '@inertiajs/react';
-import { Download, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import {
+    Download,
+    Languages,
+    PanelRightClose,
+    PanelRightOpen,
+} from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
 import { fetchSource } from '@/actions/App/Http/Controllers/DocumentController';
@@ -12,6 +17,15 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -54,6 +68,7 @@ type DocumentFormProps = {
     defaultValues?: DocumentFormValues;
     allowSourceFetch?: boolean;
     fetchedSource?: FetchedSource | null;
+    translateUrl?: string;
 };
 
 export function DocumentForm({
@@ -65,6 +80,7 @@ export function DocumentForm({
     defaultValues,
     allowSourceFetch = false,
     fetchedSource,
+    translateUrl,
 }: DocumentFormProps) {
     const titleRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLTextAreaElement>(null);
@@ -74,6 +90,8 @@ export function DocumentForm({
     );
     const [fetching, setFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
+    const [translating, setTranslating] = useState(false);
+    const [translateDialogOpen, setTranslateDialogOpen] = useState(false);
     const [sourceContent, setSourceContent] = useState(
         defaultValues?.source_content ?? '',
     );
@@ -126,6 +144,17 @@ export function DocumentForm({
         }
     }, [fetchedSource]);
 
+    // The content textarea is uncontrolled (defaultValue only sets the
+    // initial value), so when the AI translation action updates the
+    // document server-side and Inertia re-renders this already-mounted
+    // form with new props, the textarea won't pick up the change on its
+    // own. Push the new value in imperatively whenever it changes.
+    useEffect(() => {
+        if (contentRef.current) {
+            contentRef.current.value = defaultValues?.content ?? '';
+        }
+    }, [defaultValues?.content]);
+
     function handleFetchSource() {
         const url = sourceUrl.trim();
 
@@ -148,6 +177,23 @@ export function DocumentForm({
                     setFetchError(
                         errors.source_url ?? '取得に失敗しました。',
                     ),
+            },
+        );
+    }
+
+    function handleTranslate() {
+        if (!translateUrl) {
+            return;
+        }
+
+        router.post(
+            translateUrl,
+            {},
+            {
+                preserveScroll: true,
+                onStart: () => setTranslating(true),
+                onFinish: () => setTranslating(false),
+                onSuccess: () => setTranslateDialogOpen(false),
             },
         );
     }
@@ -310,8 +356,59 @@ export function DocumentForm({
                             </div>
 
                             <div className="grid gap-2">
-                                {allowSourceFetch && sourceContent && (
-                                    <div className="flex justify-end">
+                                {sourceContent && (
+                                    <div className="flex justify-end gap-2">
+                                        {translateUrl && (
+                                            <Dialog
+                                                open={translateDialogOpen}
+                                                onOpenChange={
+                                                    setTranslateDialogOpen
+                                                }
+                                            >
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-auto gap-1 px-2 py-0.5"
+                                                    >
+                                                        <Languages className="size-4" />
+                                                        AI翻訳で上書き
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogTitle>
+                                                        本文をAI翻訳の結果で上書きしますか？
+                                                    </DialogTitle>
+                                                    <DialogDescription>
+                                                        原文をもとにAIが翻訳し、現在の本文を置き換えます。この操作は元に戻せません。
+                                                    </DialogDescription>
+
+                                                    <DialogFooter className="gap-2">
+                                                        <DialogClose asChild>
+                                                            <Button variant="secondary">
+                                                                キャンセル
+                                                            </Button>
+                                                        </DialogClose>
+
+                                                        <Button
+                                                            variant="default"
+                                                            disabled={
+                                                                translating
+                                                            }
+                                                            onClick={
+                                                                handleTranslate
+                                                            }
+                                                        >
+                                                            {translating && (
+                                                                <Spinner />
+                                                            )}
+                                                            翻訳して上書き
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
                                         <Button
                                             type="button"
                                             variant="ghost"

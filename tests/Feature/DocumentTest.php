@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\User;
@@ -291,4 +292,55 @@ test('公開範囲には定義済みの値だけを指定できる', function ()
         ->assertSessionHasErrors('visibility');
 
     expect($document->fresh()->visibility)->toBe(DocumentVisibility::Private);
+});
+
+test('原文があるドキュメントはAI翻訳結果で本文が上書きされる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'content' => '元の本文',
+        'source_content' => 'Original text',
+    ]);
+
+    TranslatorAgent::fake(['翻訳された本文']);
+
+    $this->actingAs($user)
+        ->post(route('documents.translate', $document))
+        ->assertRedirect(route('documents.edit', $document));
+
+    TranslatorAgent::assertPrompted('Original text');
+    expect($document->fresh()->content)->toBe('翻訳された本文');
+});
+
+test('原文がないドキュメントはAI翻訳できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'content' => '元の本文',
+        'source_content' => null,
+    ]);
+
+    TranslatorAgent::fake();
+
+    $this->actingAs($user)
+        ->post(route('documents.translate', $document))
+        ->assertStatus(422);
+
+    TranslatorAgent::assertNeverPrompted();
+    expect($document->fresh()->content)->toBe('元の本文');
+});
+
+test('他のユーザーのドキュメントはAI翻訳できない', function () {
+    $owner = User::factory()->create();
+    $document = Document::factory()->for($owner)->create([
+        'source_content' => 'Original text',
+    ]);
+
+    $other = User::factory()->create();
+
+    TranslatorAgent::fake();
+
+    $this->actingAs($other)
+        ->post(route('documents.translate', $document))
+        ->assertForbidden();
+
+    TranslatorAgent::assertNeverPrompted();
 });

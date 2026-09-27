@@ -3,13 +3,24 @@ import {
     edit,
     index,
     show,
+    translate,
     update,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentForm } from '@/components/document-form';
 
 import type { Document } from '@/types';
 type EditDocumentProps = {
-    document: Pick<Document, 'id' | 'title' | 'content' | 'visibility'>;
+    document: Pick<
+        Document,
+        | 'id'
+        | 'title'
+        | 'content'
+        | 'visibility'
+        | 'source_title'
+        | 'source_url'
+        | 'source_author'
+        | 'source_content'
+    >;
 };
 
 export default function EditDocument({ document }: EditDocumentProps) {
@@ -42,6 +53,7 @@ export default function EditDocument({ document }: EditDocumentProps) {
                     cancelHref={show(document.id)}
                     submitLabel="更新"
                     defaultValues={document}
+                    translateUrl={translate.url(document.id)}
                 />
             </main>
         </>

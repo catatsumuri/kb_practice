@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
@@ -187,6 +188,39 @@ class DocumentController extends Controller
         return Inertia::render('documents/edit', [
             'document' => $document,
         ]);
+    }
+
+    /**
+     * Overwrite the document's content with an AI translation of its source.
+     *
+     * Runs synchronously for now; move to a queued job if translations of
+     * longer articles make this too slow for a request/response cycle.
+     */
+    public function translate(Document $document): RedirectResponse
+    {
+        Gate::authorize('update', $document);
+
+        abort_if(blank($document->source_content), 422);
+
+        try {
+            $response = (new TranslatorAgent)->prompt($document->source_content);
+        } catch (\Throwable) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => '翻訳に失敗しました。しばらくしてからもう一度お試しください。',
+            ]);
+
+            return back();
+        }
+
+        $document->update(['content' => $response->text]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => '原文をもとに本文を翻訳しました',
+        ]);
+
+        return to_route('documents.edit', $document);
     }
 
     /**
