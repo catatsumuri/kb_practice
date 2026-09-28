@@ -1,8 +1,10 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import { lang } from '@erag/lang-sync-inertia/react';
 import AppLogo from '@/components/app-logo';
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { home } from '@/routes';
+import { home, login } from '@/routes';
 import type { GuestLayoutProps } from '@/types';
 
 export default function GuestLayout({
@@ -10,6 +12,9 @@ export default function GuestLayout({
     wide = false,
     children,
 }: GuestLayoutProps) {
+    const { __ } = lang();
+    const { url } = usePage();
+
     return (
         <div
             className={cn(
@@ -17,10 +22,15 @@ export default function GuestLayout({
                 wide ? 'max-w-7xl' : 'max-w-3xl',
             )}
         >
-            <header className="flex items-center text-sm">
+            <header className="flex items-center justify-between text-sm">
                 <Link href={home()} className="flex items-center">
                     <AppLogo />
                 </Link>
+                <Button asChild variant="outline" size="sm">
+                    <Link href={login({ query: { redirect: url } })}>
+                        {__('Log in')}
+                    </Link>
+                </Button>
             </header>
 
             <Breadcrumbs breadcrumbs={breadcrumbs} />

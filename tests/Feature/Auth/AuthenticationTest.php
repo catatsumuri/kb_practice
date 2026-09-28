@@ -25,6 +25,32 @@ test('ユーザーはログイン画面から認証できる', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('redirectクエリ付きでログイン画面を開くとログイン後に元のページへ戻る', function () {
+    $user = User::factory()->create();
+
+    $this->get(route('login', ['redirect' => '/documents/typesafe']));
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertRedirect('/documents/typesafe');
+});
+
+test('redirectクエリが外部URLの場合は無視される', function () {
+    $user = User::factory()->create();
+
+    $this->get(route('login', ['redirect' => 'https://evil.example.com']));
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
 test('二要素認証が有効なユーザーは二要素認証チャレンジへリダイレクトされる', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
