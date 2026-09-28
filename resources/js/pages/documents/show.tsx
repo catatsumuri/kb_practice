@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
+import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { visibilityLabels } from '@/lib/document';
 import { headingComponents } from '@/lib/markdown-headings';
 import { cn } from '@/lib/utils';
@@ -59,8 +60,14 @@ export default function ShowDocument({
     const [showSource, setShowSource] = useState(false);
     const hasSource = Boolean(document.source_content);
     const hasNamespaceNav = Boolean(namespace) && namespaceDocuments.length > 0;
-    const [showNav, setShowNav] = useState(true);
-    const [showRightPanel, setShowRightPanel] = useState(true);
+    const [showNav, setShowNav] = usePersistedBoolean(
+        'documents.showNav',
+        true,
+    );
+    const [showRightPanel, setShowRightPanel] = usePersistedBoolean(
+        'documents.showRightPanel',
+        true,
+    );
     const navBeforeSourceRef = useRef(showNav);
 
     // Comparing translation and original side by side already needs both
