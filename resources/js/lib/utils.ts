@@ -17,3 +17,11 @@ export function formatDate(date: string): string {
         timeZone: 'Asia/Tokyo',
     }).format(new Date(date));
 }
+
+export function formatDateTime(date: string): string {
+    return new Intl.DateTimeFormat('ja-JP', {
+        dateStyle: 'long',
+        timeStyle: 'medium',
+        timeZone: 'Asia/Tokyo',
+    }).format(new Date(date));
+}

@@ -19,6 +19,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('documents/{document}/translate', [DocumentController::class, 'translate'])
         ->whereNumber('document')
         ->name('documents.translate');
+    Route::post('documents/{document}/refresh-source', [DocumentController::class, 'refreshSource'])
+        ->whereNumber('document')
+        ->name('documents.refresh-source');
+    Route::post('documents/{document}/source-snapshots/{snapshot}', [DocumentController::class, 'adoptSourceSnapshot'])
+        ->whereNumber('document')
+        ->name('documents.source-snapshots.adopt');
 
     // Creating a document is always namespace-scoped now, so these two
     // actions are pulled out of Route::resource() below and registered

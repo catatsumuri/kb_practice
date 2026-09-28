@@ -40,7 +40,9 @@ class DatabaseSeeder extends Seeder
             'source_url' => 'https://docs.typesafe.ai',
         ]);
 
-        Document::factory()->for($users[0])->create([
+        $sourceContent = File::get(database_path('seeders/sample-source.md'));
+
+        $introduction = Document::factory()->for($users[0])->create([
             'document_namespace_id' => $typesafeNamespace->id,
             'path' => 'introduction',
             'title' => 'はじめに（TypeSafe AI ドキュメント日本語訳）',
@@ -50,7 +52,16 @@ class DatabaseSeeder extends Seeder
             'source_title' => 'Introduction',
             'source_url' => 'https://docs.typesafe.ai/introduction.md',
             'source_author' => 'TypeSafe',
-            'source_content' => File::get(database_path('seeders/sample-source.md')),
+            'source_content' => $sourceContent,
         ]);
+
+        $introductionSnapshot = $introduction->sourceSnapshots()->create([
+            'content' => $sourceContent,
+            'content_hash' => hash('sha256', $sourceContent),
+            'title' => 'Introduction',
+            'fetched_at' => now(),
+        ]);
+
+        $introduction->update(['document_source_snapshot_id' => $introductionSnapshot->id]);
     }
 }

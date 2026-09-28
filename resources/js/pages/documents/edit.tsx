@@ -7,8 +7,9 @@ import {
     update,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentForm } from '@/components/document-form';
+import { SourceFreshness } from '@/components/source-freshness';
 
-import type { Document } from '@/types';
+import type { Document, DocumentSourceSnapshot } from '@/types';
 type EditDocumentProps = {
     document: Pick<
         Document,
@@ -20,10 +21,16 @@ type EditDocumentProps = {
         | 'source_url'
         | 'source_author'
         | 'source_content'
-    >;
+    > & {
+        adopted_source_snapshot: DocumentSourceSnapshot | null;
+    };
+    pendingSnapshot: DocumentSourceSnapshot | null;
 };
 
-export default function EditDocument({ document }: EditDocumentProps) {
+export default function EditDocument({
+    document,
+    pendingSnapshot,
+}: EditDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
             {
@@ -45,7 +52,14 @@ export default function EditDocument({ document }: EditDocumentProps) {
         <>
             <Head title={`${document.title}を編集`} />
 
-            <main className="p-4">
+            <main className="grid gap-4 p-4">
+                {document.source_url && (
+                    <SourceFreshness
+                        document={document}
+                        pendingSnapshot={pendingSnapshot}
+                    />
+                )}
+
                 <DocumentForm
                     title="記事の編集"
                     description="タイトルとMarkdown形式の本文を編集できます。"

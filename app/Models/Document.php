@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content', 'document_namespace_id', 'path'])]
+#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content', 'document_namespace_id', 'path', 'document_source_snapshot_id'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */
@@ -62,5 +62,26 @@ class Document extends Model
     public function namespace(): BelongsTo
     {
         return $this->belongsTo(DocumentNamespace::class, 'document_namespace_id');
+    }
+
+    /**
+     * @return HasMany<DocumentSourceSnapshot, $this>
+     */
+    public function sourceSnapshots(): HasMany
+    {
+        return $this->hasMany(DocumentSourceSnapshot::class);
+    }
+
+    /**
+     * The source snapshot currently backing this document's source_content,
+     * i.e. the version the user has explicitly adopted. Not necessarily the
+     * most recent row in sourceSnapshots() — a newer snapshot may exist but
+     * not yet be adopted, pending the user's review of its diff.
+     *
+     * @return BelongsTo<DocumentSourceSnapshot, $this>
+     */
+    public function adoptedSourceSnapshot(): BelongsTo
+    {
+        return $this->belongsTo(DocumentSourceSnapshot::class, 'document_source_snapshot_id');
     }
 }

@@ -5,6 +5,15 @@ export type DocumentVisibility = 'private' | 'public' | 'unlisted';
 
 export type DocumentType = 'original' | 'translation';
 
+export type DocumentSourceSnapshot = {
+    id: number;
+    document_id: number;
+    content: string;
+    content_hash: string;
+    title: string | null;
+    fetched_at: string;
+};
+
 export type Document = {
     id: number;
     title: string;
@@ -16,6 +25,7 @@ export type Document = {
     source_author: string | null;
     source_content: string | null;
     document_namespace_id: number | null;
+    document_source_snapshot_id: number | null;
     path: string | null;
     created_at: string;
 };

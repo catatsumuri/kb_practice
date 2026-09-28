@@ -7,6 +7,7 @@ use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Models\DocumentSourceSnapshot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -94,7 +95,11 @@ class DocumentController extends Controller
             : DocumentType::Original;
         $validated['document_namespace_id'] = $namespace->id;
 
-        $request->user()->documents()->create($validated);
+        $document = $request->user()->documents()->create($validated);
+
+        if (filled($document->source_content)) {
+            $this->recordSourceSnapshot($document, $document->source_content, $document->source_title, adopt: true);
+        }
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -116,29 +121,130 @@ class DocumentController extends Controller
             'source_url' => ['required', 'url:http,https', 'max:2048'],
         ]);
 
-        $this->assertUrlIsFetchable($validated['source_url']);
+        $fetched = $this->fetchAndParseSource($validated['source_url']);
+
+        return Inertia::render('documents/create', [
+            'fetchedSource' => [
+                'source_url' => $validated['source_url'],
+                'source_title' => $fetched['title'],
+                'content' => $fetched['content'],
+            ],
+        ]);
+    }
+
+    /**
+     * Re-fetch the document's source URL and, if the content has changed
+     * since the last adopted snapshot, record a new (not-yet-adopted)
+     * snapshot for the edit page to offer as a diff.
+     */
+    public function refreshSource(Document $document): RedirectResponse
+    {
+        Gate::authorize('update', $document);
+
+        abort_if(blank($document->source_url), 422);
 
         try {
-            $content = Http::timeout(10)->get($validated['source_url'])->throw()->body();
+            $fetched = $this->fetchAndParseSource($document->source_url);
+        } catch (ValidationException $exception) {
+            Inertia::flash('toast', [
+                'type' => 'error',
+                'message' => $exception->errors()['source_url'][0] ?? '原文の取得に失敗しました。',
+            ]);
+
+            return to_route('documents.edit', $document);
+        }
+
+        $hash = hash('sha256', $fetched['content']);
+
+        if ($hash === $document->adoptedSourceSnapshot?->content_hash) {
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => '原文に変更はありませんでした',
+            ]);
+
+            return to_route('documents.edit', $document);
+        }
+
+        $this->recordSourceSnapshot($document, $fetched['content'], $fetched['title']);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => '原文の新しいバージョンを取得しました。差分を確認してください。',
+        ]);
+
+        return to_route('documents.edit', $document);
+    }
+
+    /**
+     * Adopt a previously fetched source snapshot, overwriting the
+     * document's source_content/source_title with it.
+     */
+    public function adoptSourceSnapshot(Document $document, DocumentSourceSnapshot $snapshot): RedirectResponse
+    {
+        Gate::authorize('update', $document);
+
+        abort_unless($snapshot->document_id === $document->id, 404);
+
+        $document->update([
+            'source_content' => $snapshot->content,
+            'source_title' => $snapshot->title ?? $document->source_title,
+            'document_source_snapshot_id' => $snapshot->id,
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => '新しい原文を取り込みました',
+        ]);
+
+        return to_route('documents.edit', $document);
+    }
+
+    /**
+     * Fetch a source URL's content and pull out a title from its first
+     * Markdown h1, shared by the initial fetch (fetchSource) and later
+     * freshness checks (refreshSource).
+     *
+     * @return array{content: string, title: ?string}
+     */
+    private function fetchAndParseSource(string $url): array
+    {
+        $this->assertUrlIsFetchable($url);
+
+        try {
+            $content = Http::timeout(10)->get($url)->throw()->body();
         } catch (\Throwable) {
             throw ValidationException::withMessages([
                 'source_url' => '指定のURLから本文を取得できませんでした。',
             ]);
         }
 
-        $sourceTitle = null;
+        $title = null;
 
         if (preg_match('/^#\s+(.+)$/m', $content, $matches) === 1) {
-            $sourceTitle = trim($matches[1]);
+            $title = trim($matches[1]);
         }
 
-        return Inertia::render('documents/create', [
-            'fetchedSource' => [
-                'source_url' => $validated['source_url'],
-                'source_title' => $sourceTitle,
-                'content' => $content,
-            ],
+        return ['content' => $content, 'title' => $title];
+    }
+
+    /**
+     * Record a new source snapshot for a document, optionally adopting it
+     * immediately (i.e. making it the version backing source_content).
+     */
+    private function recordSourceSnapshot(Document $document, string $content, ?string $title, bool $adopt = false): DocumentSourceSnapshot
+    {
+        $snapshot = $document->sourceSnapshots()->create([
+            'content' => $content,
+            'content_hash' => hash('sha256', $content),
+            'title' => $title,
+            'fetched_at' => now(),
         ]);
+
+        if ($adopt) {
+            $document->update(['document_source_snapshot_id' => $snapshot->id]);
+        }
+
+        return $snapshot;
     }
 
     /**
@@ -224,8 +330,16 @@ class DocumentController extends Controller
     {
         Gate::authorize('update', $document);
 
+        $document->load('adoptedSourceSnapshot');
+
+        $latestSnapshot = $document->sourceSnapshots()->latest('fetched_at')->first();
+        $pendingSnapshot = $latestSnapshot && $latestSnapshot->id !== $document->document_source_snapshot_id
+            ? $latestSnapshot
+            : null;
+
         return Inertia::render('documents/edit', [
             'document' => $document,
+            'pendingSnapshot' => $pendingSnapshot,
         ]);
     }
 

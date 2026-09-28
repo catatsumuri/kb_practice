@@ -57,6 +57,7 @@
         "clsx": "^2.1.1",
         "codemirror": "^6.0.2",
         "concurrently": "^9.0.1",
+        "diff": "^9.0.0",
         "globals": "^15.14.0",
         "input-otp": "^1.4.2",
         "laravel-vite-plugin": "^3.0.0",

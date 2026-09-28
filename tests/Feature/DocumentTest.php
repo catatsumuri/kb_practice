@@ -4,8 +4,10 @@ use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Models\DocumentSourceSnapshot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -558,4 +560,154 @@ test('単一セグメントのネームスペーススラッグのURLはnamespac
     $this->actingAs($user)
         ->get("/documents/{$namespace->slug}")
         ->assertInertia(fn (Assert $page) => $page->component('namespaces/show'));
+});
+
+test('原文を含むドキュメント作成時に初期スナップショットが記録され自動的に採用される', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => '翻訳記事',
+            'content' => '翻訳された本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'source_url' => 'https://example.com/source.md',
+            'source_content' => 'Original text',
+        ])
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    $document = Document::query()->sole();
+    $snapshot = DocumentSourceSnapshot::query()->sole();
+
+    expect($snapshot->document_id)->toBe($document->id)
+        ->and($snapshot->content)->toBe('Original text')
+        ->and($snapshot->content_hash)->toBe(hash('sha256', 'Original text'))
+        ->and($document->document_source_snapshot_id)->toBe($snapshot->id);
+});
+
+test('原文URLがないドキュメントは鮮度を確認できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create(['source_url' => null]);
+
+    $this->actingAs($user)
+        ->post(route('documents.refresh-source', $document))
+        ->assertStatus(422);
+});
+
+test('原文に変更がない場合は新しいスナップショットは作られない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'source_url' => 'https://example.com/source.md',
+        'source_content' => 'Same content',
+    ]);
+    $snapshot = DocumentSourceSnapshot::factory()->for($document)->create([
+        'content' => 'Same content',
+        'content_hash' => hash('sha256', 'Same content'),
+    ]);
+    $document->update(['document_source_snapshot_id' => $snapshot->id]);
+
+    Http::fake(['*' => Http::response('Same content')]);
+
+    $this->actingAs($user)
+        ->post(route('documents.refresh-source', $document))
+        ->assertRedirect(route('documents.edit', $document));
+
+    expect(DocumentSourceSnapshot::query()->count())->toBe(1)
+        ->and($document->fresh()->document_source_snapshot_id)->toBe($snapshot->id);
+});
+
+test('原文が変更されている場合は新しいスナップショットが記録されるがまだ採用されない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'source_url' => 'https://example.com/source.md',
+        'source_content' => 'Old content',
+    ]);
+    $oldSnapshot = DocumentSourceSnapshot::factory()->for($document)->create([
+        'content' => 'Old content',
+        'content_hash' => hash('sha256', 'Old content'),
+    ]);
+    $document->update(['document_source_snapshot_id' => $oldSnapshot->id]);
+
+    Http::fake(['*' => Http::response("# New Title\nNew content")]);
+
+    $this->actingAs($user)
+        ->post(route('documents.refresh-source', $document))
+        ->assertRedirect(route('documents.edit', $document));
+
+    expect(DocumentSourceSnapshot::query()->count())->toBe(2)
+        ->and($document->fresh()->document_source_snapshot_id)->toBe($oldSnapshot->id)
+        ->and($document->fresh()->source_content)->toBe('Old content');
+
+    $newSnapshot = DocumentSourceSnapshot::query()->latest('id')->first();
+
+    expect($newSnapshot->content)->toBe("# New Title\nNew content")
+        ->and($newSnapshot->title)->toBe('New Title');
+
+    $this->actingAs($user)
+        ->get(route('documents.edit', $document))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/edit')
+            ->where('pendingSnapshot.id', $newSnapshot->id));
+});
+
+test('新しいスナップショットを取り込むと原文が更新される', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'source_url' => 'https://example.com/source.md',
+        'source_title' => '古いタイトル',
+        'source_content' => 'Old content',
+    ]);
+    $oldSnapshot = DocumentSourceSnapshot::factory()->for($document)->create([
+        'content' => 'Old content',
+        'content_hash' => hash('sha256', 'Old content'),
+    ]);
+    $document->update(['document_source_snapshot_id' => $oldSnapshot->id]);
+
+    $newSnapshot = DocumentSourceSnapshot::factory()->for($document)->create([
+        'content' => 'New content',
+        'content_hash' => hash('sha256', 'New content'),
+        'title' => '新しいタイトル',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('documents.source-snapshots.adopt', [$document, $newSnapshot]))
+        ->assertRedirect(route('documents.edit', $document));
+
+    $document->refresh();
+
+    expect($document->source_content)->toBe('New content')
+        ->and($document->source_title)->toBe('新しいタイトル')
+        ->and($document->document_source_snapshot_id)->toBe($newSnapshot->id);
+});
+
+test('他のユーザーのドキュメントは鮮度確認も取り込みもできない', function () {
+    $owner = User::factory()->create();
+    $document = Document::factory()->for($owner)->create([
+        'source_url' => 'https://example.com/source.md',
+        'source_content' => 'Content',
+    ]);
+    $snapshot = DocumentSourceSnapshot::factory()->for($document)->create();
+
+    $other = User::factory()->create();
+
+    Http::fake(['*' => Http::response('Content')]);
+
+    $this->actingAs($other)
+        ->post(route('documents.refresh-source', $document))
+        ->assertForbidden();
+
+    $this->actingAs($other)
+        ->post(route('documents.source-snapshots.adopt', [$document, $snapshot]))
+        ->assertForbidden();
+});
+
+test('別のドキュメントに属するスナップショットは取り込めない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+    $otherDocument = Document::factory()->for($user)->create();
+    $snapshot = DocumentSourceSnapshot::factory()->for($otherDocument)->create();
+
+    $this->actingAs($user)
+        ->post(route('documents.source-snapshots.adopt', [$document, $snapshot]))
+        ->assertNotFound();
 });
