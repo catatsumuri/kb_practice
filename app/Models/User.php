@@ -58,4 +58,12 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->hasMany(Document::class);
     }
+
+    /**
+     * @return HasMany<DocumentNamespace, $this>
+     */
+    public function documentNamespaces(): HasMany
+    {
+        return $this->hasMany(DocumentNamespace::class, 'owner_user_id');
+    }
 }

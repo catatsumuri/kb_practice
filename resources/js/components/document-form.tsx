@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentProps } from 'react';
+import { toast } from 'sonner';
 import { fetchSource } from '@/actions/App/Http/Controllers/DocumentController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ type DocumentFormValues = {
     title: string;
     content: string;
     visibility: DocumentVisibility;
+    path?: string | null;
     source_url?: string | null;
     source_title?: string | null;
     source_author?: string | null;
@@ -69,6 +71,7 @@ type DocumentFormProps = {
     allowSourceFetch?: boolean;
     fetchedSource?: FetchedSource | null;
     translateUrl?: string;
+    namespaceSlug?: string;
 };
 
 export function DocumentForm({
@@ -81,13 +84,12 @@ export function DocumentForm({
     allowSourceFetch = false,
     fetchedSource,
     translateUrl,
+    namespaceSlug,
 }: DocumentFormProps) {
     const titleRef = useRef<HTMLInputElement>(null);
     const contentRef = useRef<HTMLTextAreaElement>(null);
     const sourceTitleRef = useRef<HTMLInputElement>(null);
-    const [sourceUrl, setSourceUrl] = useState(
-        defaultValues?.source_url ?? '',
-    );
+    const [sourceUrl, setSourceUrl] = useState(defaultValues?.source_url ?? '');
     const [fetching, setFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [translating, setTranslating] = useState(false);
@@ -99,6 +101,7 @@ export function DocumentForm({
         Boolean(defaultValues?.source_content),
     );
     const [contentHeight, setContentHeight] = useState<number | null>(null);
+    const [path, setPath] = useState(defaultValues?.path ?? '');
 
     // The content textarea auto-grows to fit whatever the user is typing
     // (field-sizing: content), so its height isn't known up front. Mirror
@@ -168,15 +171,18 @@ export function DocumentForm({
             fetchSource.url(),
             { source_url: url },
             {
+                // Partial reload: without `only`, a full-props response
+                // would replace *all* current page props with just
+                // `fetchedSource`, wiping out documents/create's
+                // `namespace` prop. See mergeProps() in @inertiajs/core.
+                only: ['fetchedSource'],
                 preserveScroll: true,
                 preserveState: true,
                 preserveUrl: true,
                 onStart: () => setFetching(true),
                 onFinish: () => setFetching(false),
                 onError: (errors) =>
-                    setFetchError(
-                        errors.source_url ?? '取得に失敗しました。',
-                    ),
+                    setFetchError(errors.source_url ?? '取得に失敗しました。'),
             },
         );
     }
@@ -204,7 +210,11 @@ export function DocumentForm({
                 <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent>
-                <Form {...form} className="grid gap-6">
+                <Form
+                    {...form}
+                    className="grid gap-6"
+                    onError={() => toast.error('入力内容に誤りがあります。')}
+                >
                     {({ errors, processing }) => (
                         <>
                             {allowSourceFetch && (
@@ -316,9 +326,38 @@ export function DocumentForm({
                                     defaultValue={defaultValues?.title}
                                     aria-invalid={Boolean(errors.title)}
                                     autoFocus
+                                    required
                                 />
                                 <InputError message={errors.title} />
                             </div>
+
+                            {namespaceSlug && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="path">
+                                        スラッグ（任意）
+                                    </Label>
+                                    <div className="flex rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                                        <span className="inline-flex items-center border-r border-input bg-muted/30 px-3 text-sm whitespace-nowrap text-muted-foreground">
+                                            /{namespaceSlug}/
+                                        </span>
+                                        <Input
+                                            id="path"
+                                            name="path"
+                                            value={path}
+                                            onChange={(event) =>
+                                                setPath(event.target.value)
+                                            }
+                                            aria-invalid={Boolean(errors.path)}
+                                            className="rounded-l-none border-0 shadow-none focus-visible:border-0 focus-visible:ring-0"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        半角英数字とハイフンのみ使用できます。空欄の場合は数値IDのURLになります。公開URL:
+                                        /{namespaceSlug}/{path || 'スラッグ'}
+                                    </p>
+                                    <InputError message={errors.path} />
+                                </div>
+                            )}
 
                             <div className="grid gap-2">
                                 <Label htmlFor="visibility">公開範囲</Label>
@@ -464,13 +503,14 @@ export function DocumentForm({
                                         aria-describedby="content-help"
                                         aria-invalid={Boolean(errors.content)}
                                         className="min-h-80 resize-y font-mono leading-6"
+                                        required
                                     />
                                     {showSourcePreview && sourceContent && (
                                         <Textarea
                                             id="source_content_preview"
                                             readOnly
                                             value={sourceContent}
-                                            className="min-h-80 field-sizing-fixed resize-none overflow-y-auto bg-muted/30 font-mono leading-6"
+                                            className="field-sizing-fixed min-h-80 resize-none overflow-y-auto bg-muted/30 font-mono leading-6"
                                             style={
                                                 contentHeight
                                                     ? { height: contentHeight }

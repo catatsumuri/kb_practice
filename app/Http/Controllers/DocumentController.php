@@ -6,6 +6,7 @@ use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
+use App\Models\DocumentNamespace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -25,7 +26,14 @@ class DocumentController extends Controller
     {
         Gate::authorize('viewAny', Document::class);
 
+        $namespaces = $request->user()->documentNamespaces()
+            ->select(['id', 'owner_user_id', 'slug', 'name', 'source_url', 'created_at'])
+            ->withCount('documents')
+            ->latest()
+            ->get();
+
         $documents = $request->user()->documents()
+            ->whereNull('document_namespace_id')
             ->select(['id', 'user_id', 'title', 'visibility', 'created_at'])
             ->withCount('likes')
             ->with('user:id,name')
@@ -33,6 +41,7 @@ class DocumentController extends Controller
             ->get();
 
         return Inertia::render('documents/index', [
+            'namespaces' => $namespaces,
             'documents' => $documents,
         ]);
     }
@@ -40,33 +49,50 @@ class DocumentController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create(): Response
+    public function create(DocumentNamespace $namespace): Response
     {
         Gate::authorize('create', Document::class);
+        Gate::authorize('view', $namespace);
 
-        return Inertia::render('documents/create');
+        return Inertia::render('documents/create', [
+            'namespace' => $namespace,
+        ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, DocumentNamespace $namespace): RedirectResponse
     {
         Gate::authorize('create', Document::class);
+        Gate::authorize('view', $namespace);
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
+            'path' => [
+                'nullable',
+                'string',
+                'max:255',
+                'regex:/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/',
+                Rule::notIn(config('document-namespaces.reserved_paths')),
+                Rule::unique('documents', 'path')->where('document_namespace_id', $namespace->id),
+            ],
             'source_url' => ['nullable', 'url:http,https', 'max:2048'],
             'source_title' => ['nullable', 'string', 'max:255'],
             'source_author' => ['nullable', 'string', 'max:255'],
             'source_content' => ['nullable', 'string'],
+        ], [
+            'path.regex' => 'スラッグは半角英数字とハイフンのみ使用できます。',
+            'path.not_in' => 'このスラッグは予約されているため使用できません。',
+            'path.unique' => 'このスラッグは既に使用されています。',
         ]);
 
         $validated['document_type'] = filled($validated['source_url'] ?? null)
             ? DocumentType::Translation
             : DocumentType::Original;
+        $validated['document_namespace_id'] = $namespace->id;
 
         $request->user()->documents()->create($validated);
 
@@ -75,7 +101,7 @@ class DocumentController extends Controller
             'message' => 'ドキュメントを作成しました',
         ]);
 
-        return to_route('documents.index');
+        return to_route('namespaces.show', $namespace);
     }
 
     /**
@@ -154,6 +180,19 @@ class DocumentController extends Controller
     }
 
     /**
+     * Display the specified resource, addressed by its namespace's slug and
+     * its own path rather than its numeric id
+     * (e.g. /documents/typesafe/introduction). Delegates entirely to show()
+     * so authorization and the rendered page/props stay identical.
+     */
+    public function showByPath(Request $request, DocumentNamespace $namespace, string $path): Response
+    {
+        $document = $namespace->documents()->where('path', $path)->firstOrFail();
+
+        return $this->show($request, $document);
+    }
+
+    /**
      * Display a document via its permanent signed share link, without requiring authentication.
      */
     public function shared(Document $document): Response
@@ -170,7 +209,7 @@ class DocumentController extends Controller
      */
     private function forDisplay(Document $document): array
     {
-        $document->load('user:id,name');
+        $document->load(['user:id,name', 'namespace:id,slug,name']);
 
         return [
             'document' => $document,

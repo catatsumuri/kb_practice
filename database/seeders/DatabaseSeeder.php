@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
+use App\Models\DocumentNamespace;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -32,7 +33,16 @@ class DatabaseSeeder extends Seeder
             ]),
         ];
 
+        $typesafeNamespace = DocumentNamespace::factory()->create([
+            'owner_user_id' => $users[0]->id,
+            'slug' => 'typesafe',
+            'name' => 'TypeSafe AI Docs',
+            'source_url' => 'https://docs.typesafe.ai',
+        ]);
+
         Document::factory()->for($users[0])->create([
+            'document_namespace_id' => $typesafeNamespace->id,
+            'path' => 'introduction',
             'title' => 'はじめに（TypeSafe AI ドキュメント日本語訳）',
             'content' => File::get(database_path('seeders/sample-translation.md')),
             'visibility' => DocumentVisibility::Public,

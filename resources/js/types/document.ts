@@ -1,4 +1,5 @@
 import type { User } from './auth';
+import type { DocumentNamespace } from './document-namespace';
 
 export type DocumentVisibility = 'private' | 'public' | 'unlisted';
 
@@ -14,11 +15,14 @@ export type Document = {
     source_url: string | null;
     source_author: string | null;
     source_content: string | null;
+    document_namespace_id: number | null;
+    path: string | null;
     created_at: string;
 };
 
 export type DocumentWithUser = Document & {
     user: Pick<User, 'id' | 'name'>;
+    namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name'> | null;
 };
 
 export type DocumentListItem = DocumentWithUser & {

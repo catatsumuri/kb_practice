@@ -22,6 +22,7 @@ import {
     destroy as destroyLike,
     store as storeLike,
 } from '@/actions/App/Http/Controllers/DocumentLikeController';
+import { show as showNamespace } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -103,6 +104,14 @@ export default function ShowDocument({
                 title: can.update ? 'ドキュメント' : 'ダッシュボード',
                 href: returnRoute,
             },
+            ...(document.namespace && can.update
+                ? [
+                      {
+                          title: document.namespace.name,
+                          href: showNamespace(document.namespace.slug),
+                      },
+                  ]
+                : []),
             {
                 title: document.title,
                 href: show(document.id),
@@ -225,9 +234,7 @@ export default function ShowDocument({
                                             </p>
                                             <div className="markdown-content p-4">
                                                 <Markdown
-                                                    remarkPlugins={[
-                                                        remarkGfm,
-                                                    ]}
+                                                    remarkPlugins={[remarkGfm]}
                                                     components={
                                                         headingComponents
                                                     }
@@ -242,13 +249,9 @@ export default function ShowDocument({
                                             </p>
                                             <div className="markdown-content p-4">
                                                 <Markdown
-                                                    remarkPlugins={[
-                                                        remarkGfm,
-                                                    ]}
+                                                    remarkPlugins={[remarkGfm]}
                                                 >
-                                                    {
-                                                        document.source_content
-                                                    }
+                                                    {document.source_content}
                                                 </Markdown>
                                             </div>
                                         </div>
@@ -316,7 +319,7 @@ export default function ShowDocument({
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="-ml-2 mt-1 h-auto w-fit gap-1 px-2 py-0.5"
+                                                className="mt-1 -ml-2 h-auto w-fit gap-1 px-2 py-0.5"
                                                 onClick={() =>
                                                     setShowSource(
                                                         (open) => !open,
@@ -338,18 +341,15 @@ export default function ShowDocument({
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="-ml-2 mt-1 h-auto w-fit gap-1 px-2 py-0.5"
+                                                className="mt-1 -ml-2 h-auto w-fit gap-1 px-2 py-0.5"
                                                 onClick={() =>
-                                                    setShowToc(
-                                                        (open) => !open,
-                                                    )
+                                                    setShowToc((open) => !open)
                                                 }
                                             >
                                                 <ChevronDown
                                                     className={cn(
                                                         'size-4 transition-transform',
-                                                        showToc &&
-                                                            'rotate-180',
+                                                        showToc && 'rotate-180',
                                                     )}
                                                 />
                                                 {showToc

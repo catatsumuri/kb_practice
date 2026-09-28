@@ -3,21 +3,61 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentLikeController;
+use App\Http\Controllers\DocumentNamespaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
 Route::get('documents/{document}/shared', [DocumentController::class, 'shared'])
+    ->whereNumber('document')
     ->middleware('signed')
     ->name('documents.shared');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::post('documents/fetch-source', [DocumentController::class, 'fetchSource'])->name('documents.fetch-source');
-    Route::post('documents/{document}/translate', [DocumentController::class, 'translate'])->name('documents.translate');
-    Route::resource('documents', DocumentController::class);
-    Route::post('documents/{document}/likes', [DocumentLikeController::class, 'store'])->name('documents.likes.store');
-    Route::delete('documents/{document}/likes', [DocumentLikeController::class, 'destroy'])->name('documents.likes.destroy');
+    Route::post('documents/{document}/translate', [DocumentController::class, 'translate'])
+        ->whereNumber('document')
+        ->name('documents.translate');
+
+    // Creating a document is always namespace-scoped now, so these two
+    // actions are pulled out of Route::resource() below and registered
+    // against {namespace} (alpha-constrained) instead of {document}
+    // (numeric). Registered before documents.show-by-path — a route with
+    // the same "documents/{namespace}/<second segment>" shape but a
+    // wildcard second segment — so the literal "create" segment can
+    // never be swallowed by {path}. Same pattern as documents/create vs
+    // documents/{namespace} below.
+    Route::get('documents/{namespace}/create', [DocumentController::class, 'create'])
+        ->where('namespace', '[a-z][a-z0-9-]*')
+        ->name('documents.create');
+    Route::post('documents/{namespace}', [DocumentController::class, 'store'])
+        ->where('namespace', '[a-z][a-z0-9-]*')
+        ->name('documents.store');
+
+    Route::resource('documents', DocumentController::class)
+        ->whereNumber('document')
+        ->except(['create', 'store']);
+    Route::post('documents/{document}/likes', [DocumentLikeController::class, 'store'])
+        ->whereNumber('document')
+        ->name('documents.likes.store');
+    Route::delete('documents/{document}/likes', [DocumentLikeController::class, 'destroy'])
+        ->whereNumber('document')
+        ->name('documents.likes.destroy');
+    Route::resource('namespaces', DocumentNamespaceController::class)->only(['create', 'store']);
+
+    // Registered after the routes above so a namespace slug like "create"
+    // or "fetch-source" (already blocked by
+    // config('document-namespaces.reserved_slugs'), but kept structurally
+    // safe too) can never shadow those literal paths.
+    Route::get('documents/{namespace}', [DocumentNamespaceController::class, 'show'])
+        ->where('namespace', '[a-z][a-z0-9-]*')
+        ->name('namespaces.show');
+
+    Route::get('documents/{namespace}/{path}', [DocumentController::class, 'showByPath'])
+        ->where('namespace', '[a-z][a-z0-9-]*')
+        ->where('path', '.*')
+        ->name('documents.show-by-path');
 });
 
 require __DIR__.'/settings.php';

@@ -3,6 +3,7 @@
 use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
+use App\Models\DocumentNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\URL;
@@ -50,19 +51,154 @@ test('一覧にはいいねの数が表示される', function () {
 
 test('作成したドキュメントはログインユーザーに紐づく', function () {
     $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
 
     $this->actingAs($user)
-        ->post(route('documents.store'), [
+        ->post(route('documents.store', $namespace), [
             'title' => '自分のドキュメント',
             'content' => '本文',
             'visibility' => DocumentVisibility::Public->value,
         ])
-        ->assertRedirect(route('documents.index'));
+        ->assertRedirect(route('namespaces.show', $namespace));
 
     $document = Document::query()->sole();
 
     expect($document->user->is($user))->toBeTrue()
-        ->and($document->visibility)->toBe(DocumentVisibility::Public);
+        ->and($document->visibility)->toBe(DocumentVisibility::Public)
+        ->and($document->document_namespace_id)->toBe($namespace->id);
+});
+
+test('記事作成時にスラッグを指定するとそのパスで表示できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => 'クイックスタート',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'path' => 'quickstart',
+        ])
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    $document = Document::query()->sole();
+
+    expect($document->path)->toBe('quickstart');
+
+    $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'quickstart']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page->where('document.id', $document->id));
+});
+
+test('記事作成時のスラッグは省略できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => 'スラッグなし',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+        ])
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    expect(Document::query()->sole()->path)->toBeNull();
+});
+
+test('同じネームスペース内で同じスラッグの記事は作成できない', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    Document::factory()->for($user)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'quickstart',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => '別の記事',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'path' => 'quickstart',
+        ])
+        ->assertSessionHasErrors('path');
+
+    expect(Document::query()->count())->toBe(1);
+});
+
+test('記事のスラッグに予約語は使用できない', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => '記事',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'path' => 'create',
+        ])
+        ->assertSessionHasErrors('path');
+
+    expect(Document::query()->exists())->toBeFalse();
+});
+
+test('記事のスラッグの形式が不正な場合は作成できない', function (string $path) {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => '記事',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'path' => $path,
+        ])
+        ->assertSessionHasErrors('path');
+
+    expect(Document::query()->exists())->toBeFalse();
+})->with([
+    'スペースを含む' => 'has spaces',
+    '大文字を含む' => 'UPPERCASE',
+    '先頭がハイフン' => '-leading-hyphen',
+]);
+
+test('他のユーザーのネームスペースには記事を作成できない', function () {
+    $owner = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $owner->id]);
+    $other = User::factory()->create();
+
+    $this->actingAs($other);
+
+    $this->get(route('documents.create', $namespace))->assertForbidden();
+
+    $this->post(route('documents.store', $namespace), [
+        'title' => '他人のネームスペースへの記事',
+        'content' => '本文',
+        'visibility' => DocumentVisibility::Public->value,
+    ])->assertForbidden();
+
+    expect(Document::query()->exists())->toBeFalse();
+});
+
+test('ネームスペースの所有者は記事の作成フォームを表示できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get(route('documents.create', $namespace))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/create')
+            ->where('namespace.id', $namespace->id)
+            ->where('namespace.slug', $namespace->slug));
+});
+
+test('ネームスペース配下のcreateパスは記事作成フォームとして解決される', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get("/documents/{$namespace->slug}/create")
+        ->assertInertia(fn (Assert $page) => $page->component('documents/create'));
 });
 
 test('自分のドキュメントは表示できる', function () {
@@ -343,4 +479,83 @@ test('他のユーザーのドキュメントはAI翻訳できない', function 
         ->assertForbidden();
 
     TranslatorAgent::assertNeverPrompted();
+});
+
+test('ネームスペースとパスを指定してドキュメントを表示できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    $document = Document::factory()->for($user)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.id', $document->id));
+});
+
+test('複数セグメントのパスを持つドキュメントもパス指定URLで表示できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    $document = Document::factory()->for($user)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction/quickstart',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction/quickstart']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.id', $document->id));
+});
+
+test('ネームスペース内に存在しないパスは404になる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    Document::factory()->for($user)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'missing']))
+        ->assertNotFound();
+});
+
+test('パス指定URLでも他のユーザーの非公開ドキュメントは表示できない', function () {
+    $owner = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $owner->id]);
+    Document::factory()->for($owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $other = User::factory()->create();
+
+    $this->actingAs($other)
+        ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction']))
+        ->assertForbidden();
+});
+
+test('数値のドキュメントIDのURLは通常のdocuments.showで解決される', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->get("/documents/{$document->id}")
+        ->assertInertia(fn (Assert $page) => $page->component('documents/show'));
+});
+
+test('単一セグメントのネームスペーススラッグのURLはnamespaces.showで解決される', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->get("/documents/{$namespace->slug}")
+        ->assertInertia(fn (Assert $page) => $page->component('namespaces/show'));
 });

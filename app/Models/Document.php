@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content'])]
+#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content', 'document_namespace_id', 'path'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */
@@ -54,5 +54,13 @@ class Document extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(DocumentLike::class);
+    }
+
+    /**
+     * @return BelongsTo<DocumentNamespace, $this>
+     */
+    public function namespace(): BelongsTo
+    {
+        return $this->belongsTo(DocumentNamespace::class, 'document_namespace_id');
     }
 }
