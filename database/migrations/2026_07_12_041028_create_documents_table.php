@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('document_namespace_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('path')->nullable();
             $table->string('title');
             $table->longText('content');
             $table->string('visibility')->default('private')->index();
@@ -23,6 +25,8 @@ return new class extends Migration
             $table->string('source_author')->nullable();
             $table->longText('source_content')->nullable();
             $table->timestamps();
+
+            $table->unique(['document_namespace_id', 'path']);
         });
     }
 
