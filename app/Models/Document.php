@@ -73,6 +73,17 @@ class Document extends Model
     }
 
     /**
+     * Past versions of this document's title/content, recorded whenever an
+     * edit or AI translation overwrites them.
+     *
+     * @return HasMany<DocumentRevision, $this>
+     */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(DocumentRevision::class);
+    }
+
+    /**
      * The source snapshot currently backing this document's source_content,
      * i.e. the version the user has explicitly adopted. Not necessarily the
      * most recent row in sourceSnapshots() — a newer snapshot may exist but

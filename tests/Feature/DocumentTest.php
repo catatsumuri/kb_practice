@@ -4,6 +4,7 @@ use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Models\DocumentRevision;
 use App\Models\DocumentSourceSnapshot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -709,5 +710,119 @@ test('別のドキュメントに属するスナップショットは取り込�
 
     $this->actingAs($user)
         ->post(route('documents.source-snapshots.adopt', [$document, $snapshot]))
+        ->assertNotFound();
+});
+
+test('本文かタイトルを変更する更新は変更前の内容をリビジョンとして記録する', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'title' => '元のタイトル',
+        'content' => '元の本文',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('documents.update', $document), [
+            'title' => '新しいタイトル',
+            'content' => '新しい本文',
+            'visibility' => $document->visibility->value,
+        ])
+        ->assertRedirect(route('documents.show', $document));
+
+    $revision = DocumentRevision::query()->sole();
+
+    expect($revision->document_id)->toBe($document->id)
+        ->and($revision->user_id)->toBe($user->id)
+        ->and($revision->title)->toBe('元のタイトル')
+        ->and($revision->content)->toBe('元の本文');
+});
+
+test('本文もタイトルも変わらない更新ではリビジョンは作られない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'title' => '同じタイトル',
+        'content' => '同じ本文',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('documents.update', $document), [
+            'title' => '同じタイトル',
+            'content' => '同じ本文',
+            'visibility' => DocumentVisibility::Public->value,
+        ])
+        ->assertRedirect(route('documents.show', $document));
+
+    expect(DocumentRevision::query()->count())->toBe(0);
+});
+
+test('AI翻訳で本文を上書きすると翻訳前の本文がリビジョンとして記録される', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'content' => '元の本文',
+        'source_content' => 'Original text',
+    ]);
+
+    TranslatorAgent::fake(['翻訳された本文']);
+
+    $this->actingAs($user)
+        ->post(route('documents.translate', $document))
+        ->assertRedirect(route('documents.edit', $document));
+
+    $revision = DocumentRevision::query()->sole();
+
+    expect($revision->document_id)->toBe($document->id)
+        ->and($revision->user_id)->toBe($user->id)
+        ->and($revision->content)->toBe('元の本文')
+        ->and($document->fresh()->content)->toBe('翻訳された本文');
+});
+
+test('リビジョンを復元すると本文とタイトルが置き換わり復元前の内容もリビジョンとして残る', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create([
+        'title' => '現在のタイトル',
+        'content' => '現在の本文',
+    ]);
+    $revision = DocumentRevision::factory()->for($document)->create([
+        'title' => '過去のタイトル',
+        'content' => '過去の本文',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('documents.revisions.restore', [$document, $revision]))
+        ->assertRedirect(route('documents.edit', $document));
+
+    expect($document->fresh())
+        ->title->toBe('過去のタイトル')
+        ->content->toBe('過去の本文');
+
+    expect(DocumentRevision::query()->count())->toBe(2);
+
+    $backupRevision = DocumentRevision::query()->latest('id')->first();
+
+    expect($backupRevision->id)->not->toBe($revision->id)
+        ->and($backupRevision->title)->toBe('現在のタイトル')
+        ->and($backupRevision->content)->toBe('現在の本文');
+});
+
+test('他のユーザーのドキュメントのリビジョンは復元できない', function () {
+    $owner = User::factory()->create();
+    $document = Document::factory()->for($owner)->create();
+    $revision = DocumentRevision::factory()->for($document)->create();
+
+    $other = User::factory()->create();
+
+    $this->actingAs($other)
+        ->post(route('documents.revisions.restore', [$document, $revision]))
+        ->assertForbidden();
+});
+
+test('別のドキュメントに属するリビジョンは復元できない', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+    $otherDocument = Document::factory()->for($user)->create();
+    $revision = DocumentRevision::factory()->for($otherDocument)->create();
+
+    $this->actingAs($user)
+        ->post(route('documents.revisions.restore', [$document, $revision]))
         ->assertNotFound();
 });

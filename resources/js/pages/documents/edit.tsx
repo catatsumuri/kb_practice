@@ -7,9 +7,10 @@ import {
     update,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentForm } from '@/components/document-form';
+import { DocumentRevisions } from '@/components/document-revisions';
 import { SourceFreshness } from '@/components/source-freshness';
 
-import type { Document, DocumentSourceSnapshot } from '@/types';
+import type { Document, DocumentRevision, DocumentSourceSnapshot } from '@/types';
 type EditDocumentProps = {
     document: Pick<
         Document,
@@ -25,11 +26,13 @@ type EditDocumentProps = {
         adopted_source_snapshot: DocumentSourceSnapshot | null;
     };
     pendingSnapshot: DocumentSourceSnapshot | null;
+    revisions: DocumentRevision[];
 };
 
 export default function EditDocument({
     document,
     pendingSnapshot,
+    revisions,
 }: EditDocumentProps) {
     setLayoutProps({
         breadcrumbs: [
@@ -59,6 +62,8 @@ export default function EditDocument({
                         pendingSnapshot={pendingSnapshot}
                     />
                 )}
+
+                <DocumentRevisions document={document} revisions={revisions} />
 
                 <DocumentForm
                     title="記事の編集"

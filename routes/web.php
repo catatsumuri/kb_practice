@@ -25,6 +25,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('documents/{document}/source-snapshots/{snapshot}', [DocumentController::class, 'adoptSourceSnapshot'])
         ->whereNumber('document')
         ->name('documents.source-snapshots.adopt');
+    Route::post('documents/{document}/revisions/{revision}/restore', [DocumentController::class, 'restoreRevision'])
+        ->whereNumber('document')
+        ->name('documents.revisions.restore');
 
     // Creating a document is always namespace-scoped now, so these two
     // actions are pulled out of Route::resource() below and registered

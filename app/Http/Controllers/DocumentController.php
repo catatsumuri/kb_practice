@@ -7,6 +7,7 @@ use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Models\DocumentRevision;
 use App\Models\DocumentSourceSnapshot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -337,9 +338,16 @@ class DocumentController extends Controller
             ? $latestSnapshot
             : null;
 
+        $revisions = $document->revisions()
+            ->with('user:id,name')
+            ->latest()
+            ->limit(20)
+            ->get();
+
         return Inertia::render('documents/edit', [
             'document' => $document,
             'pendingSnapshot' => $pendingSnapshot,
+            'revisions' => $revisions,
         ]);
     }
 
@@ -349,7 +357,7 @@ class DocumentController extends Controller
      * Runs synchronously for now; move to a queued job if translations of
      * longer articles make this too slow for a request/response cycle.
      */
-    public function translate(Document $document): RedirectResponse
+    public function translate(Request $request, Document $document): RedirectResponse
     {
         Gate::authorize('update', $document);
 
@@ -364,6 +372,10 @@ class DocumentController extends Controller
             ]);
 
             return back();
+        }
+
+        if ($document->content !== $response->text) {
+            $this->recordRevision($document, $request->user()->id);
         }
 
         $document->update(['content' => $response->text]);
@@ -389,6 +401,10 @@ class DocumentController extends Controller
             'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
         ]);
 
+        if ($document->title !== $validated['title'] || $document->content !== $validated['content']) {
+            $this->recordRevision($document, $request->user()->id);
+        }
+
         $document->update($validated);
 
         Inertia::flash('toast', [
@@ -397,6 +413,45 @@ class DocumentController extends Controller
         ]);
 
         return to_route('documents.show', $document);
+    }
+
+    /**
+     * Restore a past revision, overwriting the document's current
+     * title/content with it. The current title/content are recorded as a
+     * revision first, so restoring is itself reversible.
+     */
+    public function restoreRevision(Request $request, Document $document, DocumentRevision $revision): RedirectResponse
+    {
+        Gate::authorize('update', $document);
+
+        abort_unless($revision->document_id === $document->id, 404);
+
+        $this->recordRevision($document, $request->user()->id);
+
+        $document->update([
+            'title' => $revision->title,
+            'content' => $revision->content,
+        ]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => '過去の版を復元しました',
+        ]);
+
+        return to_route('documents.edit', $document);
+    }
+
+    /**
+     * Snapshot the document's current title/content into its revision
+     * history, before it gets overwritten.
+     */
+    private function recordRevision(Document $document, int $userId): DocumentRevision
+    {
+        return $document->revisions()->create([
+            'user_id' => $userId,
+            'title' => $document->title,
+            'content' => $document->content,
+        ]);
     }
 
     /**

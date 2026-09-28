@@ -14,6 +14,15 @@ export type DocumentSourceSnapshot = {
     fetched_at: string;
 };
 
+export type DocumentRevision = {
+    id: number;
+    document_id: number;
+    title: string;
+    content: string;
+    created_at: string;
+    user: Pick<User, 'id' | 'name'> | null;
+};
+
 export type Document = {
     id: number;
     title: string;

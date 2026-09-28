@@ -1,0 +1,29 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Models\Document;
+use App\Models\DocumentRevision;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends Factory<DocumentRevision>
+ */
+class DocumentRevisionFactory extends Factory
+{
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'document_id' => Document::factory(),
+            'user_id' => User::factory(),
+            'title' => fake()->sentence(),
+            'content' => fake()->realText(),
+        ];
+    }
+}
