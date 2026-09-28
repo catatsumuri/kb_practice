@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DocumentVisibility;
 use App\Models\DocumentNamespace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,16 +14,23 @@ use Inertia\Response;
 class DocumentNamespaceController extends Controller
 {
     /**
-     * Display the specified resource.
+     * Display the specified resource. The owner sees all of their own
+     * documents in the namespace; anyone else (including guests, for a
+     * public namespace) only sees the namespace's public documents.
      */
     public function show(Request $request, DocumentNamespace $namespace): Response
     {
         Gate::authorize('view', $namespace);
 
+        $isOwner = $request->user()?->id === $namespace->owner_user_id;
+
         $documents = $namespace->documents()
-            ->where('user_id', $request->user()->id)
+            ->when(
+                $isOwner,
+                fn ($query) => $query->where('user_id', $request->user()->id),
+                fn ($query) => $query->where('visibility', DocumentVisibility::Public),
+            )
             ->select(['id', 'user_id', 'title', 'visibility', 'created_at', 'path'])
-            ->withCount('likes')
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -61,11 +69,14 @@ class DocumentNamespaceController extends Controller
             ],
             'name' => ['required', 'string', 'max:255'],
             'source_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'is_public' => ['sometimes', 'boolean'],
         ], [
             'slug.regex' => 'スラッグは半角英数字とハイフンのみ使用できます。',
             'slug.not_in' => 'このスラッグは予約されているため使用できません。',
             'slug.unique' => 'このスラッグは既に使用されています。',
         ]);
+
+        $validated['is_public'] = $request->boolean('is_public');
 
         $request->user()->documentNamespaces()->create($validated);
 
@@ -75,5 +86,43 @@ class DocumentNamespaceController extends Controller
         ]);
 
         return to_route('documents.index');
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(DocumentNamespace $namespace): Response
+    {
+        Gate::authorize('update', $namespace);
+
+        return Inertia::render('namespaces/edit', [
+            'namespace' => $namespace,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage. The slug isn't editable
+     * here since it's embedded in every document URL under this namespace.
+     */
+    public function update(Request $request, DocumentNamespace $namespace): RedirectResponse
+    {
+        Gate::authorize('update', $namespace);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'source_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'is_public' => ['sometimes', 'boolean'],
+        ]);
+
+        $validated['is_public'] = $request->boolean('is_public');
+
+        $namespace->update($validated);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'ネームスペースを更新しました',
+        ]);
+
+        return to_route('namespaces.show', $namespace);
     }
 }

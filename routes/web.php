@@ -2,16 +2,18 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\DocumentLikeController;
 use App\Http\Controllers\DocumentNamespaceController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
-Route::get('documents/{document}/shared', [DocumentController::class, 'shared'])
+// Public documents are viewable by guests, so these two are registered
+// outside the auth group. Their numeric/alpha constraints keep them from
+// colliding with the namespace and resource routes below regardless of
+// registration order.
+Route::get('documents/{document}', [DocumentController::class, 'show'])
     ->whereNumber('document')
-    ->middleware('signed')
-    ->name('documents.shared');
+    ->name('documents.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -46,27 +48,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('documents', DocumentController::class)
         ->whereNumber('document')
-        ->except(['create', 'store']);
-    Route::post('documents/{document}/likes', [DocumentLikeController::class, 'store'])
-        ->whereNumber('document')
-        ->name('documents.likes.store');
-    Route::delete('documents/{document}/likes', [DocumentLikeController::class, 'destroy'])
-        ->whereNumber('document')
-        ->name('documents.likes.destroy');
-    Route::resource('namespaces', DocumentNamespaceController::class)->only(['create', 'store']);
-
-    // Registered after the routes above so a namespace slug like "create"
-    // or "fetch-source" (already blocked by
-    // config('document-namespaces.reserved_slugs'), but kept structurally
-    // safe too) can never shadow those literal paths.
-    Route::get('documents/{namespace}', [DocumentNamespaceController::class, 'show'])
-        ->where('namespace', '[a-z][a-z0-9-]*')
-        ->name('namespaces.show');
-
-    Route::get('documents/{namespace}/{path}', [DocumentController::class, 'showByPath'])
-        ->where('namespace', '[a-z][a-z0-9-]*')
-        ->where('path', '.*')
-        ->name('documents.show-by-path');
+        ->except(['create', 'store', 'show']);
+    Route::resource('namespaces', DocumentNamespaceController::class)->only(['create', 'store', 'edit', 'update']);
 });
+
+// Public namespaces/documents are viewable by guests. Registered after the
+// auth group's documents/{namespace}/create so that literal segment still
+// wins over these wildcard shapes for the same "documents/{namespace}/…"
+// prefix.
+Route::get('documents/{namespace}', [DocumentNamespaceController::class, 'show'])
+    ->where('namespace', '[a-z][a-z0-9-]*')
+    ->name('namespaces.show');
+
+Route::get('documents/{namespace}/{path}', [DocumentController::class, 'showByPath'])
+    ->where('namespace', '[a-z][a-z0-9-]*')
+    ->where('path', '.*')
+    ->name('documents.show-by-path');
 
 require __DIR__.'/settings.php';

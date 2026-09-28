@@ -1,6 +1,5 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Heart } from 'lucide-react';
 import { show } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentMeta } from '@/components/document-meta';
 import {
@@ -10,12 +9,12 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { dashboard } from '@/routes';
-import type { DocumentListItem } from '@/types';
+import type { DocumentWithUser } from '@/types';
 
 type DashboardProps = {
     documents: Pick<
-        DocumentListItem,
-        'id' | 'title' | 'created_at' | 'user' | 'likes_count'
+        DocumentWithUser,
+        'id' | 'title' | 'created_at' | 'user'
     >[];
 };
 
@@ -65,22 +64,14 @@ export default function Dashboard({ documents }: DashboardProps) {
                                     prefetch
                                 >
                                     <Card className="h-full transition-colors hover:bg-muted/50">
-                                        <CardHeader className="flex-row items-start justify-between gap-4">
-                                            <div className="grid gap-1.5">
-                                                <CardTitle className="line-clamp-2 leading-snug">
-                                                    {document.title}
-                                                </CardTitle>
-                                                <DocumentMeta
-                                                    author={document.user.name}
-                                                    createdAt={
-                                                        document.created_at
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
-                                                <Heart className="size-4" />
-                                                {document.likes_count}
-                                            </div>
+                                        <CardHeader className="grid gap-1.5">
+                                            <CardTitle className="line-clamp-2 leading-snug">
+                                                {document.title}
+                                            </CardTitle>
+                                            <DocumentMeta
+                                                author={document.user.name}
+                                                createdAt={document.created_at}
+                                            />
                                         </CardHeader>
                                     </Card>
                                 </Link>

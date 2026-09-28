@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['slug', 'name', 'source_url'])]
+#[Fillable(['slug', 'name', 'source_url', 'is_public'])]
 class DocumentNamespace extends Model
 {
     /** @use HasFactory<DocumentNamespaceFactory> */
@@ -22,6 +22,18 @@ class DocumentNamespace extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_public' => 'boolean',
+        ];
     }
 
     /**

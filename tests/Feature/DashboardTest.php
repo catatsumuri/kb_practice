@@ -24,10 +24,6 @@ test('認証済みユーザーはダッシュボードを表示できる', funct
         'title' => '非公開ドキュメント',
         'visibility' => DocumentVisibility::Private,
     ]);
-    Document::factory()->for($author)->create([
-        'title' => '限定公開ドキュメント',
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
 
     $this->actingAs($user)
         ->get(route('dashboard'))
@@ -38,23 +34,4 @@ test('認証済みユーザーはダッシュボードを表示できる', funct
             ->where('documents.0.id', $publicDocument->id)
             ->where('documents.0.title', '公開ドキュメント')
             ->where('documents.0.user.name', '公開ユーザー'));
-});
-
-test('ダッシュボードにはいいねの数が表示される', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->create([
-        'visibility' => DocumentVisibility::Public,
-    ]);
-
-    $likers = User::factory()->count(2)->create();
-    foreach ($likers as $liker) {
-        $document->likes()->create(['user_id' => $liker->id]);
-    }
-
-    $this->actingAs($user)
-        ->get(route('dashboard'))
-        ->assertSuccessful()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
-            ->where('documents.0.likes_count', 2));
 });

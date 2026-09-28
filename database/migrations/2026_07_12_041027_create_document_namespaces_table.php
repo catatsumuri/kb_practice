@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('name');
             $table->string('source_url')->nullable();
+            $table->boolean('is_public')->default(false);
             $table->timestamps();
         });
     }

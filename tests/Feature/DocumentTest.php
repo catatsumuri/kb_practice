@@ -9,16 +9,32 @@ use App\Models\DocumentSourceSnapshot;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
-test('未認証ユーザーはドキュメントからログイン画面へリダイレクトされる', function () {
-    $document = Document::factory()->create();
-
+test('未認証ユーザーは一覧からログイン画面へリダイレクトされる', function () {
     $this->get(route('documents.index'))->assertRedirect(route('login'));
-    $this->get(route('documents.show', $document))->assertRedirect(route('login'));
+});
+
+test('未認証ユーザーは非公開ドキュメントを閲覧できない', function () {
+    $document = Document::factory()->create([
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->get(route('documents.show', $document))->assertForbidden();
+});
+
+test('未認証ユーザーは公開ドキュメントを閲覧できる', function () {
+    $document = Document::factory()->create([
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->where('document.id', $document->id));
 });
 
 test('一覧には自分のドキュメントのみ表示される', function () {
@@ -33,23 +49,6 @@ test('一覧には自分のドキュメントのみ表示される', function ()
             ->component('documents/index')
             ->has('documents', 1)
             ->where('documents.0.id', $ownDocument->id));
-});
-
-test('一覧にはいいねの数が表示される', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->for($user)->create();
-
-    $likers = User::factory()->count(2)->create();
-    foreach ($likers as $liker) {
-        $document->likes()->create(['user_id' => $liker->id]);
-    }
-
-    $this->actingAs($user)
-        ->get(route('documents.index'))
-        ->assertSuccessful()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('documents/index')
-            ->where('documents.0.likes_count', 2));
 });
 
 test('作成したドキュメントはログインユーザーに紐づく', function () {
@@ -221,7 +220,7 @@ test('自分のドキュメントは表示できる', function () {
 test('指定した公開範囲で作成されたドキュメントは詳細画面でも同じ公開範囲になる', function () {
     $user = User::factory()->create();
     $document = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
+        'visibility' => DocumentVisibility::Public,
     ]);
 
     $this->actingAs($user)
@@ -229,7 +228,7 @@ test('指定した公開範囲で作成されたドキュメントは詳細画�
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('documents/show')
-            ->where('document.visibility', DocumentVisibility::Unlisted->value));
+            ->where('document.visibility', DocumentVisibility::Public->value));
 });
 
 test('指定した公開範囲に編集されたドキュメントは詳細画面でも同じ公開範囲になる', function () {
@@ -261,14 +260,14 @@ test('自分のドキュメントは変更や削除ができる', function () {
         ->put(route('documents.update', $document), [
             'title' => '変更後のタイトル',
             'content' => '変更後の本文',
-            'visibility' => DocumentVisibility::Unlisted->value,
+            'visibility' => DocumentVisibility::Public->value,
         ])
         ->assertRedirect(route('documents.show', $document));
 
     expect($document->fresh())
         ->title->toBe('変更後のタイトル')
         ->content->toBe('変更後の本文')
-        ->visibility->toBe(DocumentVisibility::Unlisted);
+        ->visibility->toBe(DocumentVisibility::Public);
 
     $this->delete(route('documents.destroy', $document))
         ->assertRedirect(route('documents.index'));
@@ -326,96 +325,6 @@ test('他のユーザーの公開ドキュメントは表示できるが変更�
         'visibility' => DocumentVisibility::Private->value,
     ])->assertForbidden();
     $this->delete(route('documents.destroy', $document))->assertForbidden();
-});
-
-test('ゲストは有効な共有リンクで限定公開ドキュメントを閲覧できる', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-
-    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
-
-    $this->get($shareUrl)
-        ->assertSuccessful()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('documents/shared')
-            ->where('document.id', $document->id));
-});
-
-test('署名が不正な共有リンクではドキュメントを閲覧できない', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-    $otherDocument = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-
-    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
-    $tamperedUrl = str_replace(
-        "documents/{$document->id}/shared",
-        "documents/{$otherDocument->id}/shared",
-        $shareUrl,
-    );
-
-    $this->get($tamperedUrl)->assertForbidden();
-});
-
-test('限定公開以外のドキュメントは共有リンクでは閲覧できない', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-
-    $shareUrl = URL::signedRoute('documents.shared', ['document' => $document]);
-
-    $document->update(['visibility' => DocumentVisibility::Private]);
-
-    $this->get($shareUrl)->assertNotFound();
-});
-
-test('限定公開ドキュメントの詳細画面には共有リンクが含まれる', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-
-    $this->actingAs($user)
-        ->get(route('documents.show', $document))
-        ->assertSuccessful()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('documents/show')
-            ->where('shareUrl', URL::signedRoute('documents.shared', ['document' => $document])));
-});
-
-test('非公開・公開ドキュメントの詳細画面には共有リンクが含まれない', function () {
-    $user = User::factory()->create();
-
-    $privateDocument = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Private,
-    ]);
-    $publicDocument = Document::factory()->for($user)->create([
-        'visibility' => DocumentVisibility::Public,
-    ]);
-
-    $this->actingAs($user);
-
-    $this->get(route('documents.show', $privateDocument))
-        ->assertInertia(fn (Assert $page) => $page->where('shareUrl', null));
-    $this->get(route('documents.show', $publicDocument))
-        ->assertInertia(fn (Assert $page) => $page->where('shareUrl', null));
-});
-
-test('他のログインユーザーは限定公開ドキュメントを通常の詳細画面からは閲覧できない', function () {
-    $user = User::factory()->create();
-    $document = Document::factory()->create([
-        'visibility' => DocumentVisibility::Unlisted,
-    ]);
-
-    $this->actingAs($user)
-        ->get(route('documents.show', $document))
-        ->assertForbidden();
 });
 
 test('公開範囲には定義済みの値だけを指定できる', function () {
@@ -543,6 +452,68 @@ test('パス指定URLでも他のユーザーの非公開ドキュメントは�
     $this->actingAs($other)
         ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction']))
         ->assertForbidden();
+});
+
+test('ゲストへのサイドバーナビゲーションには同じネームスペースの公開ドキュメントのみ並ぶ', function () {
+    $owner = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $owner->id, 'is_public' => true]);
+    $document = Document::factory()->for($owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+        'title' => 'はじめに',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+    $privateSibling = Document::factory()->for($owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'secret',
+        'title' => '非公開ページ',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->has('namespaceDocuments', 1)
+            ->where('namespaceDocuments.0.id', $document->id));
+});
+
+test('ネームスペースのオーナーへのサイドバーナビゲーションには自分の非公開ドキュメントも並ぶ', function () {
+    $owner = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $owner->id]);
+    $document = Document::factory()->for($owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+        'title' => 'はじめに',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+    $privateSibling = Document::factory()->for($owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'secret',
+        'title' => '非公開ページ',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->has('namespaceDocuments', 2)
+            ->where('namespaceDocuments.0.id', $document->id)
+            ->where('namespaceDocuments.1.id', $privateSibling->id));
+});
+
+test('ネームスペースに属さないドキュメントのサイドバーナビゲーションは空になる', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->get(route('documents.show', $document))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/show')
+            ->has('namespaceDocuments', 0));
 });
 
 test('数値のドキュメントIDのURLは通常のdocuments.showで解決される', function () {

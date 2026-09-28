@@ -1,30 +1,29 @@
-import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Heart } from 'lucide-react';
+import { Head, Link, setLayoutProps, usePage } from '@inertiajs/react';
 import {
     create as createDocument,
     index,
     show as showDocument,
     showByPath,
 } from '@/actions/App/Http/Controllers/DocumentController';
-import { show } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
+import {
+    edit as editNamespace,
+    show,
+} from '@/actions/App/Http/Controllers/DocumentNamespaceController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DocumentMeta } from '@/components/document-meta';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { visibilityLabels } from '@/lib/document';
 
-import type { DocumentListItem, DocumentNamespace } from '@/types';
+import type { DocumentNamespace, DocumentWithUser } from '@/types';
 type ShowNamespaceProps = {
-    namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name' | 'source_url'>;
+    namespace: Pick<
+        DocumentNamespace,
+        'id' | 'slug' | 'name' | 'source_url' | 'owner_user_id' | 'is_public'
+    >;
     documents: Pick<
-        DocumentListItem,
-        | 'id'
-        | 'title'
-        | 'visibility'
-        | 'created_at'
-        | 'user'
-        | 'likes_count'
-        | 'path'
+        DocumentWithUser,
+        'id' | 'title' | 'visibility' | 'created_at' | 'user' | 'path'
     >[];
 };
 
@@ -32,17 +31,21 @@ export default function ShowNamespace({
     namespace,
     documents: documentList,
 }: ShowNamespaceProps) {
+    const { auth } = usePage().props;
+    const isOwner = auth.user?.id === namespace.owner_user_id;
+
+    // Non-owners (including guests, i.e. "public mode") reach this page
+    // directly, so the namespace itself is the breadcrumb root regardless
+    // of whether it's open or closed. Only the owner gets the "ドキュメント"
+    // level above it.
     setLayoutProps({
-        breadcrumbs: [
-            {
-                title: 'ドキュメント',
-                href: index(),
-            },
-            {
-                title: namespace.name,
-                href: show(namespace.slug),
-            },
-        ],
+        wide: true,
+        breadcrumbs: isOwner
+            ? [
+                  { title: 'ドキュメント', href: index() },
+                  { title: namespace.name, href: show(namespace.slug) },
+              ]
+            : [{ title: namespace.name, href: show(namespace.slug) }],
     });
 
     return (
@@ -51,9 +54,16 @@ export default function ShowNamespace({
             <main className="p-4">
                 <div className="mb-6 flex items-start justify-between gap-4">
                     <div className="grid gap-1">
-                        <h1 className="text-xl font-semibold">
-                            {namespace.name}
-                        </h1>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h1 className="text-xl font-semibold">
+                                {namespace.name}
+                            </h1>
+                            {isOwner && (
+                                <Badge variant="secondary">
+                                    {namespace.is_public ? '公開' : '非公開'}
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                             /{namespace.slug}
                         </p>
@@ -68,18 +78,29 @@ export default function ShowNamespace({
                             </a>
                         )}
                     </div>
-                    <Button asChild variant="outline" className="shrink-0">
-                        <Link href={createDocument(namespace.slug)}>
-                            新規記事
-                        </Link>
-                    </Button>
+                    {isOwner && (
+                        <div className="flex shrink-0 gap-2">
+                            <Button asChild variant="outline">
+                                <Link href={editNamespace(namespace.slug)}>
+                                    設定を編集
+                                </Link>
+                            </Button>
+                            <Button asChild variant="outline">
+                                <Link href={createDocument(namespace.slug)}>
+                                    新規記事
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {documentList.length === 0 ? (
                     <Card>
                         <CardHeader>
                             <CardTitle>
-                                このネームスペースにはまだドキュメントがありません
+                                {isOwner
+                                    ? 'このネームスペースにはまだドキュメントがありません'
+                                    : '公開されているドキュメントはありません'}
                             </CardTitle>
                         </CardHeader>
                     </Card>
@@ -99,38 +120,30 @@ export default function ShowNamespace({
                                     prefetch
                                 >
                                     <Card className="transition-colors hover:bg-muted/50">
-                                        <CardHeader className="flex-row items-center justify-between gap-4">
-                                            <div className="grid gap-1">
-                                                <CardTitle>
-                                                    {document.title}
-                                                </CardTitle>
-                                                {document.path && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        /{namespace.slug}/
-                                                        {document.path}
-                                                    </p>
-                                                )}
-                                                <Badge
-                                                    variant="secondary"
-                                                    className="w-fit"
-                                                >
-                                                    {
-                                                        visibilityLabels[
-                                                            document.visibility
-                                                        ]
-                                                    }
-                                                </Badge>
-                                                <DocumentMeta
-                                                    author={document.user.name}
-                                                    createdAt={
-                                                        document.created_at
-                                                    }
-                                                />
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
-                                                <Heart className="size-4" />
-                                                {document.likes_count}
-                                            </div>
+                                        <CardHeader className="grid gap-1">
+                                            <CardTitle>
+                                                {document.title}
+                                            </CardTitle>
+                                            {document.path && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    /{namespace.slug}/
+                                                    {document.path}
+                                                </p>
+                                            )}
+                                            <Badge
+                                                variant="secondary"
+                                                className="w-fit"
+                                            >
+                                                {
+                                                    visibilityLabels[
+                                                        document.visibility
+                                                    ]
+                                                }
+                                            </Badge>
+                                            <DocumentMeta
+                                                author={document.user.name}
+                                                createdAt={document.created_at}
+                                            />
                                         </CardHeader>
                                     </Card>
                                 </Link>

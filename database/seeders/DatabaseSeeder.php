@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             'slug' => 'typesafe',
             'name' => 'TypeSafe AI Docs',
             'source_url' => 'https://docs.typesafe.ai',
+            'is_public' => true,
         ]);
 
         $sourceContent = File::get(database_path('seeders/sample-source.md'));

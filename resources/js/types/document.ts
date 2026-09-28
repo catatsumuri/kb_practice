@@ -1,7 +1,7 @@
 import type { User } from './auth';
 import type { DocumentNamespace } from './document-namespace';
 
-export type DocumentVisibility = 'private' | 'public' | 'unlisted';
+export type DocumentVisibility = 'private' | 'public';
 
 export type DocumentType = 'original' | 'translation';
 
@@ -44,11 +44,9 @@ export type DocumentWithUser = Document & {
     namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name'> | null;
 };
 
-export type DocumentListItem = DocumentWithUser & {
-    likes_count: number;
-};
-
 export type DocumentPermissions = {
     update: boolean;
     delete: boolean;
 };
+
+export type DocumentNavItem = Pick<Document, 'id' | 'title' | 'path'>;

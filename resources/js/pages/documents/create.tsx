@@ -11,7 +11,7 @@ import type { FetchedSource } from '@/components/document-form';
 import type { DocumentNamespace } from '@/types';
 
 type CreateDocumentProps = {
-    namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name'>;
+    namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name' | 'is_public'>;
     fetchedSource?: FetchedSource | null;
 };
 
@@ -41,6 +41,9 @@ export default function CreateDocument({
                     allowSourceFetch
                     fetchedSource={fetchedSource}
                     namespaceSlug={namespace.slug}
+                    defaultVisibility={
+                        namespace.is_public ? 'public' : 'private'
+                    }
                 />
             </main>
         </>

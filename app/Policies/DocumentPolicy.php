@@ -17,11 +17,12 @@ class DocumentPolicy
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Determine whether the user can view the model. Guests (no
+     * authenticated user) can only view public documents.
      */
-    public function view(User $user, Document $document): bool
+    public function view(?User $user, Document $document): bool
     {
-        return $this->isOwner($user, $document)
+        return ($user !== null && $this->isOwner($user, $document))
             || $document->visibility === DocumentVisibility::Public;
     }
 

@@ -11,9 +11,9 @@ use App\Models\DocumentRevision;
 use App\Models\DocumentSourceSnapshot;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -29,7 +29,7 @@ class DocumentController extends Controller
         Gate::authorize('viewAny', Document::class);
 
         $namespaces = $request->user()->documentNamespaces()
-            ->select(['id', 'owner_user_id', 'slug', 'name', 'source_url', 'created_at'])
+            ->select(['id', 'owner_user_id', 'slug', 'name', 'source_url', 'is_public', 'created_at'])
             ->withCount('documents')
             ->latest()
             ->get();
@@ -37,7 +37,6 @@ class DocumentController extends Controller
         $documents = $request->user()->documents()
             ->whereNull('document_namespace_id')
             ->select(['id', 'user_id', 'title', 'visibility', 'created_at'])
-            ->withCount('likes')
             ->with('user:id,name')
             ->latest()
             ->get();
@@ -267,22 +266,19 @@ class DocumentController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource. Public documents are viewable by
+     * guests; private documents require the owner to be authenticated.
      */
     public function show(Request $request, Document $document): Response
     {
         Gate::authorize('view', $document);
 
         return Inertia::render('documents/show', [
-            ...$this->forDisplay($document),
-            'liked' => $document->likes()->where('user_id', $request->user()->id)->exists(),
+            ...$this->forDisplay($request, $document),
             'can' => [
                 'update' => Gate::allows('update', $document),
                 'delete' => Gate::allows('delete', $document),
             ],
-            'shareUrl' => $document->visibility === DocumentVisibility::Unlisted
-                ? URL::signedRoute('documents.shared', ['document' => $document])
-                : null,
         ]);
     }
 
@@ -300,27 +296,37 @@ class DocumentController extends Controller
     }
 
     /**
-     * Display a document via its permanent signed share link, without requiring authentication.
-     */
-    public function shared(Document $document): Response
-    {
-        abort_unless($document->visibility === DocumentVisibility::Unlisted, 404);
-
-        return Inertia::render('documents/shared', $this->forDisplay($document));
-    }
-
-    /**
-     * Load the document's author and like count shared by the show and shared views.
+     * Load the document's author and namespace, plus the sibling documents
+     * in the same namespace for the sidebar navigation, shared by the show
+     * view. The visibility rule mirrors DocumentNamespaceController::show:
+     * the namespace's owner sees all of their own documents, everyone else
+     * only sees the namespace's public ones.
      *
-     * @return array{document: Document, likesCount: int}
+     * @return array{document: Document, namespaceDocuments: Collection<int, Document>}
      */
-    private function forDisplay(Document $document): array
+    private function forDisplay(Request $request, Document $document): array
     {
-        $document->load(['user:id,name', 'namespace:id,slug,name']);
+        $document->load(['user:id,name', 'namespace:id,slug,name,owner_user_id']);
+
+        $isNamespaceOwner = $document->namespace
+            && $request->user()
+            && $request->user()->id === $document->namespace->owner_user_id;
+
+        $namespaceDocuments = $document->namespace
+            ? $document->namespace->documents()
+                ->when(
+                    $isNamespaceOwner,
+                    fn ($query) => $query->where('user_id', $request->user()->id),
+                    fn ($query) => $query->where('visibility', DocumentVisibility::Public),
+                )
+                ->select(['id', 'title', 'path'])
+                ->orderBy('title')
+                ->get()
+            : collect();
 
         return [
             'document' => $document,
-            'likesCount' => $document->likes()->count(),
+            'namespaceDocuments' => $namespaceDocuments,
         ];
     }
 

@@ -4,6 +4,7 @@ export type DocumentNamespace = {
     slug: string;
     name: string;
     source_url: string | null;
+    is_public: boolean;
     created_at: string;
 };
 

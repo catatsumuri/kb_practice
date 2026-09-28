@@ -16,11 +16,13 @@ class DocumentNamespacePolicy
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Determine whether the user can view the model. Guests (no
+     * authenticated user) can only view public namespaces.
      */
-    public function view(User $user, DocumentNamespace $documentNamespace): bool
+    public function view(?User $user, DocumentNamespace $documentNamespace): bool
     {
-        return $this->isOwner($user, $documentNamespace);
+        return ($user !== null && $this->isOwner($user, $documentNamespace))
+            || $documentNamespace->is_public;
     }
 
     /**
@@ -29,6 +31,14 @@ class DocumentNamespacePolicy
     public function create(User $user): bool
     {
         return true;
+    }
+
+    /**
+     * Determine whether the user can update the model.
+     */
+    public function update(User $user, DocumentNamespace $documentNamespace): bool
+    {
+        return $this->isOwner($user, $documentNamespace);
     }
 
     private function isOwner(User $user, DocumentNamespace $documentNamespace): bool

@@ -4,6 +4,7 @@ import type { BreadcrumbItem } from '@/types/navigation';
 export type AppLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
+    wide?: boolean;
 };
 
 export type AppVariant = 'header' | 'sidebar';
@@ -22,4 +23,6 @@ export type AuthLayoutProps = {
 
 export type GuestLayoutProps = {
     children: ReactNode;
+    breadcrumbs?: BreadcrumbItem[];
+    wide?: boolean;
 };

@@ -5,6 +5,7 @@ import {
     create as createNamespace,
     show as showNamespace,
 } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -17,7 +18,7 @@ import type { DocumentNamespaceListItem } from '@/types';
 type DocumentsProps = {
     namespaces: Pick<
         DocumentNamespaceListItem,
-        'id' | 'slug' | 'name' | 'documents_count'
+        'id' | 'slug' | 'name' | 'documents_count' | 'is_public'
     >[];
 };
 
@@ -66,9 +67,16 @@ export default function Documents({
                                     <Link href={showNamespace(namespace.slug)}>
                                         <Card className="h-full transition-colors hover:bg-muted/50">
                                             <CardHeader>
-                                                <CardTitle>
-                                                    {namespace.name}
-                                                </CardTitle>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <CardTitle>
+                                                        {namespace.name}
+                                                    </CardTitle>
+                                                    <Badge variant="secondary">
+                                                        {namespace.is_public
+                                                            ? '公開'
+                                                            : '非公開'}
+                                                    </Badge>
+                                                </div>
                                                 <CardDescription>
                                                     /{namespace.slug}
                                                 </CardDescription>

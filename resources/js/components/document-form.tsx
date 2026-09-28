@@ -68,6 +68,7 @@ type DocumentFormProps = {
     cancelHref: LinkHref;
     submitLabel: string;
     defaultValues?: DocumentFormValues;
+    defaultVisibility?: DocumentVisibility;
     allowSourceFetch?: boolean;
     fetchedSource?: FetchedSource | null;
     translateUrl?: string;
@@ -81,6 +82,7 @@ export function DocumentForm({
     cancelHref,
     submitLabel,
     defaultValues,
+    defaultVisibility = 'private',
     allowSourceFetch = false,
     fetchedSource,
     translateUrl,
@@ -364,7 +366,8 @@ export function DocumentForm({
                                 <Select
                                     name="visibility"
                                     defaultValue={
-                                        defaultValues?.visibility ?? 'private'
+                                        defaultValues?.visibility ??
+                                        defaultVisibility
                                     }
                                 >
                                     <SelectTrigger
@@ -380,16 +383,13 @@ export function DocumentForm({
                                         <SelectItem value="private">
                                             非公開
                                         </SelectItem>
-                                        <SelectItem value="unlisted">
-                                            限定公開
-                                        </SelectItem>
                                         <SelectItem value="public">
                                             公開
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground">
-                                    公開したドキュメントは全ユーザーの公開一覧に表示されます。
+                                    公開したドキュメントは非ログイン者にも表示されます。
                                 </p>
                                 <InputError message={errors.visibility} />
                             </div>
