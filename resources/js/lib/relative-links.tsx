@@ -1,3 +1,5 @@
+import { inkstreamDefaultComponents } from '@catatsumuri/inkstream/react';
+import type { ComponentType } from 'react';
 import type { Components } from 'react-markdown';
 import { cn } from '@/lib/utils';
 
@@ -55,4 +57,47 @@ export function createRelativeLinkComponent(
             </a>
         );
     };
+}
+
+type CardProps = { href?: string } & Record<string, unknown>;
+
+/**
+ * The renderers InkstreamMarkdown needs to keep root-relative links working:
+ * `a` for ordinary markdown links, and `card` because a `<Card href>` is
+ * rendered by inkstream as its own anchor rather than through `a`, so it
+ * would otherwise keep pointing at the site the markdown was copied from.
+ */
+export function createRelativeLinkComponents(
+    resolve: (path: string) => RelativeLinkResolution,
+): Components {
+    const DefaultCard = (
+        inkstreamDefaultComponents as unknown as Record<
+            string,
+            ComponentType<CardProps>
+        >
+    ).card;
+
+    function RelativeCard(props: CardProps) {
+        const { href } = props;
+
+        if (typeof href !== 'string' || !isRootRelative(href)) {
+            return <DefaultCard {...props} />;
+        }
+
+        const resolution = resolve(href.slice(1));
+
+        return (
+            <DefaultCard
+                {...props}
+                href={
+                    typeof resolution === 'string' ? resolution : resolution.url
+                }
+            />
+        );
+    }
+
+    return {
+        a: createRelativeLinkComponent(resolve),
+        card: RelativeCard,
+    } as Components;
 }

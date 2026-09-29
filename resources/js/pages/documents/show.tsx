@@ -37,7 +37,7 @@ import { DocumentMeta } from '@/components/document-meta';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
 import { documentHref, visibilityLabels } from '@/lib/document';
-import { createRelativeLinkComponent } from '@/lib/relative-links';
+import { createRelativeLinkComponents } from '@/lib/relative-links';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -172,24 +172,21 @@ export default function ShowDocument({
                 .filter((path) => path !== null),
         );
 
-        return {
-            a: createRelativeLinkComponent((path) => {
-                if (paths.has(path)) {
-                    return {
-                        url: showByPath({ namespace: namespace.slug, path })
-                            .url,
-                        exists: true,
-                    };
-                }
-
+        return createRelativeLinkComponents((path) => {
+            if (paths.has(path)) {
                 return {
-                    url: auth.user
-                        ? create(namespace.slug, { query: { path } }).url
-                        : showByPath({ namespace: namespace.slug, path }).url,
-                    exists: false,
+                    url: showByPath({ namespace: namespace.slug, path }).url,
+                    exists: true,
                 };
-            }),
-        };
+            }
+
+            return {
+                url: auth.user
+                    ? create(namespace.slug, { query: { path } }).url
+                    : showByPath({ namespace: namespace.slug, path }).url,
+                exists: false,
+            };
+        });
     }, [namespace, namespaceDocuments, auth.user]);
 
     // The source pane renders the untranslated original, so its root-
@@ -203,9 +200,9 @@ export default function ShowDocument({
 
         const sourceOrigin = new URL(document.source_url).origin;
 
-        return {
-            a: createRelativeLinkComponent((path) => `${sourceOrigin}/${path}`),
-        };
+        return createRelativeLinkComponents(
+            (path) => `${sourceOrigin}/${path}`,
+        );
     }, [document.source_url]);
 
     // Owners get the full "ドキュメント > namespace > title" trail. Everyone
