@@ -212,19 +212,21 @@ test('confidenceの翻訳済み本文がシードされ、コード内の識別�
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 
-test('how-to-buildは画像とTypesafeExampleを平坦化した原本を取り込んだだけで未翻訳のままシードされる', function () {
+test('how-to-buildの翻訳済み本文がシードされ、画像URLと入れ子のタグ構造は原文のまま残る', function () {
     $this->seed();
 
     $document = Document::query()->where('path', 'concepts/how-to-build-with-system-one')->sole();
 
-    expect($document->source_url)->toBe('https://docs.typesafe.ai/concepts/how-to-build-with-system-one.md')
+    expect($document->title)->toBe('TypeSafeを使った開発方法')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/concepts/how-to-build-with-system-one.md')
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/how-to-build-with-system-one')
         ->and($document->source_content)->not->toContain('<img')
-        ->and($document->source_content)->not->toContain('<Frame')
-        ->and($document->source_content)->not->toContain('TypesafeExample')
-        ->and($document->source_content)->toContain('#only-light)')
-        ->and($document->source_content)->toContain('#only-dark)')
-        ->and(substr_count($document->source_content, '```json title='))->toBe(8)
-        ->and($document->content)->toBe($document->source_content)
+        ->and($document->content)->toStartWith('# TypeSafeを使った開発方法')
+        ->and($document->content)->toContain('#only-light)')
+        ->and($document->content)->toContain('#only-dark)')
+        ->and(substr_count($document->content, '<Step '))->toBe(8)
+        ->and(substr_count($document->content, '</Step>'))->toBe(8)
+        ->and(substr_count($document->content, '<Accordion '))->toBe(9)
+        ->and(substr_count($document->content, '```json title='))->toBe(8)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

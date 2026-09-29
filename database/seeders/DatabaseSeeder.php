@@ -197,18 +197,14 @@ class DatabaseSeeder extends Seeder
             content: File::get(database_path('seeders/typesafe-confidence-translation.md')),
         );
 
-        // Imported from the source site but not translated yet, so the
-        // content is still the original text.
-        $howToBuildSource = File::get(database_path('seeders/typesafe-how-to-build-with-system-one-source.md'));
-
         $this->createTranslation(
             $users[0],
             $typesafeNamespace,
             path: 'concepts/how-to-build-with-system-one',
             sourceTitle: 'How to build with TypeSafe',
-            title: 'How to build with TypeSafe',
-            sourceContent: $howToBuildSource,
-            content: $howToBuildSource,
+            title: 'TypeSafeを使った開発方法',
+            sourceContent: File::get(database_path('seeders/typesafe-how-to-build-with-system-one-source.md')),
+            content: File::get(database_path('seeders/typesafe-how-to-build-with-system-one-translation.md')),
         );
     }
 
