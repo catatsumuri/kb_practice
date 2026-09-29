@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(10);
+        ->and(Document::query()->count())->toBe(11);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -178,5 +178,20 @@ test('primitives/noulの翻訳済み本文がシードされ、criteriaのキー
         ->and(substr_count($document->content, '```json title='))->toBe(2)
         ->and($document->content)->toContain('"type": "noul"')
         ->and($document->content)->toContain('"true": "以前の試み')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('primitives/advancedの翻訳済み本文がシードされ、JSONのキーは原文のまま残る', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'primitives/advanced')->sole();
+
+    expect($document->title)->toBe('上級編：構造')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/primitives/advanced.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/advanced')
+        ->and($document->source_content)->not->toContain('TypesafeExample')
+        ->and($document->content)->toStartWith('# 上級編：構造')
+        ->and(substr_count($document->content, '```json title='))->toBe(5)
+        ->and($document->content)->toContain('"compare": ["ticket.sender.display_name", "ticket.sender.email"]')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

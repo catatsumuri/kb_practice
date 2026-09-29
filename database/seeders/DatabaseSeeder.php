@@ -176,6 +176,16 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-noul-source.md')),
             content: File::get(database_path('seeders/typesafe-noul-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'primitives/advanced',
+            sourceTitle: 'Advanced: structure',
+            title: '上級編：構造',
+            sourceContent: File::get(database_path('seeders/typesafe-advanced-source.md')),
+            content: File::get(database_path('seeders/typesafe-advanced-translation.md')),
+        );
     }
 
     /**
