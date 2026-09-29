@@ -55,7 +55,8 @@ test('its instructions translate example prose in code blocks but not keys or id
         ->toContain('translate the')
         ->toContain('natural-language string values')
         ->toContain('Never')
-        ->toContain('translate keys, identifiers')
+        ->toContain('translate keys, identifiers (including variable, function and')
+        ->toContain('user_message')
         ->toContain('exactly the translation the request');
 });
 

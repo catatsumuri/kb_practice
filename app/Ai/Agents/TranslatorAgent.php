@@ -37,7 +37,9 @@ class TranslatorAgent implements Agent
             natural-language string values (a state text, instructions,
             criteria descriptions, other example prose) and code comments,
             so that the same example reads the same everywhere. Never
-            translate keys, identifiers, option names used as keys (billing,
+            translate keys, identifiers (including variable, function and
+            argument names in code, even when they read like English such as
+            user_message), option names used as keys (billing,
             wrong_size, ...), fixed values such as "type": "choice", URLs or
             model names. A response that repeats text from its request (such
             as a score legend) must use exactly the translation the request

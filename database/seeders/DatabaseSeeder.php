@@ -186,6 +186,16 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-advanced-source.md')),
             content: File::get(database_path('seeders/typesafe-advanced-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'confidence',
+            sourceTitle: 'Confidence',
+            title: '確信度',
+            sourceContent: File::get(database_path('seeders/typesafe-confidence-source.md')),
+            content: File::get(database_path('seeders/typesafe-confidence-translation.md')),
+        );
     }
 
     /**
