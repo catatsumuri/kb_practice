@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(14);
+        ->and(Document::query()->count())->toBe(19);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -247,5 +247,101 @@ test('machine-learning-primerの翻訳済み本文がシードされ、画像URL
         ->and($document->content)->not->toContain('<img')
         ->and(substr_count($document->content, '#only-light)'))->toBe(3)
         ->and(substr_count($document->content, '#only-dark)'))->toBe(3)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('patternsの翻訳済み本文がシードされ、表と内部リンクは維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'patterns')->sole();
+
+    expect($document->title)->toBe('パターン')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/patterns.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/patterns')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# パターン')
+        ->and($document->content)->toContain('| パターン | 概要 | メリット |')
+        ->and($document->content)->toContain('[投機的ファンアウト](/patterns/fan-out)')
+        ->and(substr_count($document->content, '<Tip>'))->toBe(1)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('patterns/fan-outの翻訳済み本文がシードされ、コード例の構造と識別子が維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'patterns/fan-out')->sole();
+
+    expect($document->title)->toBe('投機的ファンアウト')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/patterns/fan-out.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/patterns/fan-out')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# 投機的ファンアウト')
+        ->and(substr_count($document->content, '```mermaid'))->toBe(1)
+        ->and(substr_count($document->content, '```json title='))->toBe(1)
+        ->and(substr_count($document->content, '```python title='))->toBe(1)
+        ->and(substr_count($document->content, '<Note>'))->toBe(1)
+        ->and($document->content)->toContain('"bug_report": "ユーザーが壊れているかエラーが発生していることを報告している"')
+        ->and($document->content)->toContain('route_to_billing_with_flag(ticket_id, refund_likely=True)')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('patterns/confidence-routingの翻訳済み本文がシードされ、コード例の構造と識別子が維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'patterns/confidence-routing')->sole();
+
+    expect($document->title)->toBe('確信度ゲートルーティング')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/patterns/confidence-routing.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/patterns/confidence-routing')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# 確信度ゲートルーティング')
+        ->and(substr_count($document->content, '```mermaid'))->toBe(1)
+        ->and(substr_count($document->content, '```json title='))->toBe(1)
+        ->and(substr_count($document->content, '```python'))->toBe(1)
+        ->and($document->content)->toContain('"approve_transfer": "保留中の送金リクエストを承認する"')
+        ->and($document->content)->toContain('if action.confidence > 0.85:')
+        ->and($document->content)->toContain('ask_user_to_confirm("確認のためお伺いします：この送金を承認されますか？")')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('patterns/composite-scoringの翻訳済み本文がシードされ、コード例の構造と識別子が維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'patterns/composite-scoring')->sole();
+
+    expect($document->title)->toBe('複合スコアリング')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/patterns/composite-scoring.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/patterns/composite-scoring')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# 複合スコアリング')
+        ->and(substr_count($document->content, '```mermaid'))->toBe(1)
+        ->and(substr_count($document->content, '```json title='))->toBe(1)
+        ->and(substr_count($document->content, '```python title='))->toBe(1)
+        ->and(substr_count($document->content, '"type": "score"'))->toBe(4)
+        ->and($document->content)->toContain('"python_depth": {')
+        ->and($document->content)->toContain('"Pythonの経験についての記載なし"')
+        ->and($document->content)->toContain('ic_score = (0.40 * py) + (0.10 * lead) + (0.40 * arch) + (0.10 * general)')
+        ->and($document->content)->toContain('em_score = (0.15 * py) + (0.40 * lead) + (0.20 * arch) + (0.25 * general)')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('patterns/intent-routingの翻訳済み本文がシードされ、コード例の構造と識別子が維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'patterns/intent-routing')->sole();
+
+    expect($document->title)->toBe('インテントルーティング')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/patterns/intent-routing.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/patterns/intent-routing')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# インテントルーティング')
+        ->and(substr_count($document->content, '```mermaid'))->toBe(1)
+        ->and(substr_count($document->content, '```json title='))->toBe(1)
+        ->and(substr_count($document->content, '```python title='))->toBe(1)
+        ->and($document->content)->toContain('"order_status": "既存の注文について問い合わせている"')
+        ->and($document->content)->toContain('def route_ticket(ticket_id, response):')
+        ->and($document->content)->toContain('handle_with_llm(ticket_id, PRODUCT_SPECIALIST)')
+        ->and($document->content)->toContain('handle_with_llm(ticket_id, RETURNS_SPECIALIST)')
+        ->and($document->content)->toContain('handle_with_llm(ticket_id, COMPLAINT_RESOLUTION)')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

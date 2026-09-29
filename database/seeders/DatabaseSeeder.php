@@ -216,6 +216,56 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-machine-learning-primer-source.md')),
             content: File::get(database_path('seeders/typesafe-machine-learning-primer-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'patterns',
+            sourceTitle: 'Patterns',
+            title: 'パターン',
+            sourceContent: File::get(database_path('seeders/typesafe-patterns-source.md')),
+            content: File::get(database_path('seeders/typesafe-patterns-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'patterns/fan-out',
+            sourceTitle: 'Speculative fan-out',
+            title: '投機的ファンアウト',
+            sourceContent: File::get(database_path('seeders/typesafe-fan-out-source.md')),
+            content: File::get(database_path('seeders/typesafe-fan-out-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'patterns/confidence-routing',
+            sourceTitle: 'Confidence-gated routing',
+            title: '確信度ゲートルーティング',
+            sourceContent: File::get(database_path('seeders/typesafe-confidence-routing-source.md')),
+            content: File::get(database_path('seeders/typesafe-confidence-routing-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'patterns/composite-scoring',
+            sourceTitle: 'Composite scoring',
+            title: '複合スコアリング',
+            sourceContent: File::get(database_path('seeders/typesafe-composite-scoring-source.md')),
+            content: File::get(database_path('seeders/typesafe-composite-scoring-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'patterns/intent-routing',
+            sourceTitle: 'Intent routing',
+            title: 'インテントルーティング',
+            sourceContent: File::get(database_path('seeders/typesafe-intent-routing-source.md')),
+            content: File::get(database_path('seeders/typesafe-intent-routing-translation.md')),
+        );
     }
 
     /**
