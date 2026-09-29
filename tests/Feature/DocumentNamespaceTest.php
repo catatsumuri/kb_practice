@@ -268,3 +268,82 @@ test('未認証ユーザーはネームスペースの編集画面からログ�
 
     $this->get(route('namespaces.edit', $namespace))->assertRedirect(route('login'));
 });
+
+test('ナビゲーション定義に沿ってグループ化し、未掲載の文書は末尾の無題グループに入る', function () {
+    $namespace = DocumentNamespace::factory()->create([
+        'navigation' => [
+            ['title' => 'Start', 'pages' => ['b', 'missing', 'a']],
+            ['title' => 'Empty', 'pages' => ['missing']],
+        ],
+    ]);
+    $documents = collect(['a', 'b', 'z'])->map(
+        fn (string $path) => Document::factory()->for(User::factory()->create())->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+        ]),
+    );
+
+    $groups = $namespace->navigationGroups($documents);
+
+    expect($groups)->toHaveCount(2)
+        ->and($groups[0]['title'])->toBe('Start')
+        ->and(collect($groups[0]['documents'])->pluck('path')->all())->toBe(['b', 'a'])
+        ->and($groups[1]['title'])->toBeNull()
+        ->and(collect($groups[1]['documents'])->pluck('path')->all())->toBe(['z']);
+});
+
+test('ナビゲーションがない名前空間は全ての文書を1つの無題グループにする', function () {
+    $namespace = DocumentNamespace::factory()->create(['navigation' => null]);
+    $documents = Document::factory()->count(2)->for(User::factory()->create())->create([
+        'document_namespace_id' => $namespace->id,
+    ]);
+
+    $groups = $namespace->navigationGroups($documents);
+
+    expect($groups)->toHaveCount(1)->and($groups[0]['title'])->toBeNull()
+        ->and($groups[0]['documents'])->toHaveCount(2);
+});
+
+test('文書ページはサイドバー用にナビゲーションのグループと順序を渡す', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create([
+        'slug' => 'typesafe',
+        'is_public' => true,
+        'navigation' => [['title' => 'Start', 'pages' => ['second', 'first']]],
+    ]);
+    foreach (['first', 'second'] as $path) {
+        Document::factory()->for($user)->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+            'title' => $path === 'first' ? 'あ' : 'い',
+            'visibility' => DocumentVisibility::Public,
+        ]);
+    }
+
+    $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'first']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('namespaceNavigation.0.title', 'Start')
+            ->where('namespaceNavigation.0.documents.0.path', 'second')
+            ->where('namespaceNavigation.0.documents.1.path', 'first'));
+});
+
+test('名前空間の一覧はナビゲーションの順序で並ぶ', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create([
+        'owner_user_id' => $user->id,
+        'is_public' => true,
+        'navigation' => [['title' => 'Start', 'pages' => ['second', 'first']]],
+    ]);
+    foreach (['first', 'second'] as $path) {
+        Document::factory()->for($user)->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+            'visibility' => DocumentVisibility::Public,
+        ]);
+    }
+
+    $this->get(route('namespaces.show', $namespace))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('documents.0.path', 'second')
+            ->where('documents.1.path', 'first'));
+});

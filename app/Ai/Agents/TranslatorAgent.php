@@ -30,6 +30,19 @@ class TranslatorAgent implements Agent
             lists, links, tables, and code blocks. Do not translate code,
             URLs, or proper nouns that should stay untranslated.
 
+            When translating into Japanese, do not put spaces between
+            Japanese and Latin text, and use these terms consistently:
+            confidence = 確信度,
+            state = 状態, question = 質問, primitive = プリミティブ,
+            probability = 確率, coding agent = コーディングエージェント,
+            agent skill = エージェントスキル,
+            calibrated = キャリブレーション済み,
+            System One model = System Oneモデル, Quick start = クイックスタート,
+            Patterns = パターン, context rot = コンテキストロット.
+            Keep these untranslated: Jev, TypeSafe, System One, Choice,
+            Score, Noul, Playground, SDK, API, and code identifiers such as
+            `choice`, `score`, `noul` and `confidence`.
+
             Markdown emphasis must still render after translation. If a
             closing "**" or "*" comes directly after punctuation such as ")"
             or "」" and would be followed directly by a letter (e.g. Japanese

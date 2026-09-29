@@ -14,7 +14,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(2);
+        ->and(Document::query()->count())->toBe(3);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -34,6 +34,19 @@ test('quickstartの翻訳済み本文がシードされる', function () {
 
     expect($document->title)->toBe('クイックスタート')
         ->and($document->content)->toStartWith('# クイックスタート')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('coding-agentsの翻訳済み本文がシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'introduction/coding-agents')->sole();
+
+    expect($document->title)->toBe('コーディングエージェントとJev')
+        ->and($document->content)->toStartWith('# コーディングエージェントとJev')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/introduction/coding-agents.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/introduction/coding-agents')
         ->and($document->source_content)->toStartWith('> ## Documentation Index')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

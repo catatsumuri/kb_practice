@@ -38,57 +38,107 @@ class DatabaseSeeder extends Seeder
             'slug' => 'typesafe',
             'name' => 'TypeSafe AI Docs',
             'source_url' => 'https://docs.typesafe.ai',
+            'navigation' => [
+                [
+                    'title' => 'スタートガイド',
+                    'pages' => [
+                        'introduction',
+                        'introduction/quickstart',
+                        'introduction/coding-agents',
+                        'concepts/use-case-map',
+                    ],
+                ],
+                [
+                    'title' => 'コンセプト',
+                    'pages' => [
+                        'concepts/system-one',
+                        'concepts/state',
+                        'confidence',
+                        'concepts/how-to-build-with-system-one',
+                        'introduction/machine-learning-primer',
+                    ],
+                ],
+                [
+                    'title' => 'パターン',
+                    'pages' => [
+                        'patterns',
+                        'patterns/fan-out',
+                        'patterns/confidence-routing',
+                        'patterns/composite-scoring',
+                        'patterns/intent-routing',
+                    ],
+                ],
+            ],
             'is_public' => true,
         ]);
 
-        $sourceContent = File::get(database_path('seeders/sample-source.md'));
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'introduction',
+            sourceTitle: 'Introduction',
+            title: 'はじめに（TypeSafe AI ドキュメント日本語訳）',
+            sourceContent: File::get(database_path('seeders/sample-source.md')),
+            content: File::get(database_path('seeders/sample-translation.md')),
+        );
 
-        $introduction = Document::factory()->for($users[0])->create([
-            'document_namespace_id' => $typesafeNamespace->id,
-            'path' => 'introduction',
-            'title' => 'はじめに（TypeSafe AI ドキュメント日本語訳）',
-            'content' => File::get(database_path('seeders/sample-translation.md')),
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'introduction/quickstart',
+            sourceTitle: 'Quick start',
+            title: 'クイックスタート',
+            sourceContent: File::get(database_path('seeders/typesafe-quickstart-source.md')),
+            content: File::get(database_path('seeders/typesafe-quickstart-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'introduction/coding-agents',
+            sourceTitle: 'Jev with coding agents',
+            title: 'コーディングエージェントとJev',
+            sourceContent: File::get(database_path('seeders/typesafe-coding-agents-source.md')),
+            content: File::get(database_path('seeders/typesafe-coding-agents-translation.md')),
+        );
+    }
+
+    /**
+     * Create a public translation document mirroring a page of the
+     * namespace's source site, with its source snapshot adopted.
+     */
+    private function createTranslation(
+        User $user,
+        DocumentNamespace $namespace,
+        string $path,
+        string $sourceTitle,
+        string $title,
+        string $sourceContent,
+        string $content,
+    ): Document {
+        $document = Document::factory()->for($user)->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+            'title' => $title,
+            'content' => $content,
             'visibility' => DocumentVisibility::Public,
             'document_type' => DocumentType::Translation,
-            'source_title' => 'Introduction',
-            'source_url' => 'https://docs.typesafe.ai/introduction.md',
-            'canonical_url' => 'https://docs.typesafe.ai/introduction',
+            'source_title' => $sourceTitle,
+            'source_url' => "{$namespace->source_url}/{$path}.md",
+            'canonical_url' => "{$namespace->source_url}/{$path}",
             'source_author' => 'TypeSafe',
             'source_content' => $sourceContent,
         ]);
 
-        $introductionSnapshot = $introduction->sourceSnapshots()->create([
+        $snapshot = $document->sourceSnapshots()->create([
             'content' => $sourceContent,
             'content_hash' => hash('sha256', $sourceContent),
-            'title' => 'Introduction',
+            'title' => $sourceTitle,
             'fetched_at' => now(),
         ]);
 
-        $introduction->update(['document_source_snapshot_id' => $introductionSnapshot->id]);
+        $document->update(['document_source_snapshot_id' => $snapshot->id]);
 
-        $quickstartSource = File::get(database_path('seeders/typesafe-quickstart-source.md'));
-
-        $quickstart = Document::factory()->for($users[0])->create([
-            'document_namespace_id' => $typesafeNamespace->id,
-            'path' => 'introduction/quickstart',
-            'title' => 'クイックスタート',
-            'content' => File::get(database_path('seeders/typesafe-quickstart-translation.md')),
-            'visibility' => DocumentVisibility::Public,
-            'document_type' => DocumentType::Translation,
-            'source_title' => 'Quick start',
-            'source_url' => 'https://docs.typesafe.ai/introduction/quickstart.md',
-            'canonical_url' => 'https://docs.typesafe.ai/introduction/quickstart',
-            'source_author' => 'TypeSafe',
-            'source_content' => $quickstartSource,
-        ]);
-
-        $quickstartSnapshot = $quickstart->sourceSnapshots()->create([
-            'content' => $quickstartSource,
-            'content_hash' => hash('sha256', $quickstartSource),
-            'title' => 'Quick start',
-            'fetched_at' => now(),
-        ]);
-
-        $quickstart->update(['document_source_snapshot_id' => $quickstartSnapshot->id]);
+        return $document;
     }
 }

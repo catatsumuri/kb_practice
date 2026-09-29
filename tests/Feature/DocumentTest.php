@@ -37,18 +37,17 @@ test('未認証ユーザーは公開ドキュメントを閲覧できる', funct
             ->where('document.id', $document->id));
 });
 
-test('一覧には自分のドキュメントのみ表示される', function () {
+test('一覧はネームスペースだけを渡し、ドキュメント単体は渡さない', function () {
     $user = User::factory()->create();
-    $ownDocument = Document::factory()->for($user)->create();
-    Document::factory()->create();
+    Document::factory()->for($user)->create();
 
     $this->actingAs($user)
         ->get(route('documents.index'))
         ->assertSuccessful()
         ->assertInertia(fn (Assert $page) => $page
             ->component('documents/index')
-            ->has('documents', 1)
-            ->where('documents.0.id', $ownDocument->id));
+            ->has('namespaces')
+            ->missing('documents'));
 });
 
 test('作成したドキュメントはログインユーザーに紐づく', function () {

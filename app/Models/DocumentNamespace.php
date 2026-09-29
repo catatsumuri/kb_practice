@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
-#[Fillable(['slug', 'name', 'source_url', 'is_public'])]
+#[Fillable(['slug', 'name', 'source_url', 'navigation', 'is_public'])]
 class DocumentNamespace extends Model
 {
     /** @use HasFactory<DocumentNamespaceFactory> */
@@ -33,6 +34,7 @@ class DocumentNamespace extends Model
     {
         return [
             'is_public' => 'boolean',
+            'navigation' => 'array',
         ];
     }
 
@@ -42,6 +44,45 @@ class DocumentNamespace extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    /**
+     * Arrange documents into the namespace's navigation groups, following
+     * the order of `navigation` (a list of {title, pages: [path, ...]}).
+     * Pages without a matching document are skipped, empty groups dropped,
+     * and documents the navigation does not mention are collected, in their
+     * given order, into a trailing group without a title. Without any
+     * navigation, all documents form that single untitled group.
+     *
+     * @param  Collection<int, Document>  $documents
+     * @return list<array{title: ?string, documents: list<Document>}>
+     */
+    public function navigationGroups(Collection $documents): array
+    {
+        $documentsByPath = $documents->whereNotNull('path')->keyBy('path');
+        $listedPaths = [];
+        $groups = [];
+
+        foreach ($this->navigation ?? [] as $group) {
+            $groupDocuments = collect($group['pages'] ?? [])
+                ->map(fn (string $path) => $documentsByPath->get($path))
+                ->filter()
+                ->values();
+
+            $listedPaths = [...$listedPaths, ...$groupDocuments->pluck('path')->all()];
+
+            if ($groupDocuments->isNotEmpty()) {
+                $groups[] = ['title' => $group['title'] ?? null, 'documents' => $groupDocuments->all()];
+            }
+        }
+
+        $unlisted = $documents->reject(fn (Document $document) => in_array($document->path, $listedPaths, true));
+
+        if ($unlisted->isNotEmpty()) {
+            $groups[] = ['title' => null, 'documents' => $unlisted->values()->all()];
+        }
+
+        return $groups;
     }
 
     /**

@@ -37,16 +37,8 @@ class DocumentController extends Controller
             ->latest()
             ->get();
 
-        $documents = $request->user()->documents()
-            ->whereNull('document_namespace_id')
-            ->select(['id', 'user_id', 'title', 'visibility', 'created_at'])
-            ->with('user:id,name')
-            ->latest()
-            ->get();
-
         return Inertia::render('documents/index', [
             'namespaces' => $namespaces,
-            'documents' => $documents,
         ]);
     }
 
@@ -316,11 +308,11 @@ class DocumentController extends Controller
      * the namespace's owner sees all of their own documents, everyone else
      * only sees the namespace's public ones.
      *
-     * @return array{document: Document, namespaceDocuments: Collection<int, Document>}
+     * @return array{document: Document, namespaceDocuments: Collection<int, Document>, namespaceNavigation: list<array{title: ?string, documents: list<Document>}>}
      */
     private function forDisplay(Request $request, Document $document): array
     {
-        $document->load(['user:id,name', 'namespace:id,slug,name,owner_user_id']);
+        $document->load(['user:id,name', 'namespace:id,slug,name,owner_user_id,navigation']);
 
         $isNamespaceOwner = $document->namespace
             && $request->user()
@@ -341,6 +333,9 @@ class DocumentController extends Controller
         return [
             'document' => $document,
             'namespaceDocuments' => $namespaceDocuments,
+            'namespaceNavigation' => $document->namespace
+                ? $document->namespace->navigationGroups($namespaceDocuments)
+                : [],
         ];
     }
 

@@ -42,6 +42,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 import type {
+    DocumentNavGroup,
     DocumentNavItem,
     DocumentPermissions,
     DocumentWithUser,
@@ -50,12 +51,14 @@ import type {
 type ShowDocumentProps = {
     document: DocumentWithUser;
     namespaceDocuments: DocumentNavItem[];
+    namespaceNavigation: DocumentNavGroup[];
     can: DocumentPermissions;
 };
 
 export default function ShowDocument({
     document,
     namespaceDocuments,
+    namespaceNavigation,
     can,
 }: ShowDocumentProps) {
     const { __ } = lang();
@@ -366,32 +369,63 @@ export default function ShowDocument({
                                         >
                                             {namespace.name}
                                         </Link>
-                                        <ul className="space-y-1">
-                                            {namespaceDocuments.map((item) => (
-                                                <li key={item.id}>
-                                                    <Link
-                                                        href={
-                                                            item.path
-                                                                ? showByPath({
-                                                                      namespace:
-                                                                          namespace.slug,
-                                                                      path: item.path,
-                                                                  })
-                                                                : show(item.id)
-                                                        }
-                                                        prefetch
-                                                        className={cn(
-                                                            'block rounded px-1 py-0.5 text-muted-foreground hover:text-foreground',
-                                                            item.id ===
-                                                                document.id &&
-                                                                'font-medium text-foreground',
+                                        {namespaceNavigation.map(
+                                            (group, index) => (
+                                                <div
+                                                    key={
+                                                        group.title ??
+                                                        `group-${index}`
+                                                    }
+                                                    className={cn(
+                                                        index > 0 && 'mt-4',
+                                                    )}
+                                                >
+                                                    {group.title && (
+                                                        <p className="mb-1 px-1 text-xs font-semibold tracking-wide text-foreground">
+                                                            {group.title}
+                                                        </p>
+                                                    )}
+                                                    <ul className="space-y-1">
+                                                        {group.documents.map(
+                                                            (item) => (
+                                                                <li
+                                                                    key={
+                                                                        item.id
+                                                                    }
+                                                                >
+                                                                    <Link
+                                                                        href={
+                                                                            item.path
+                                                                                ? showByPath(
+                                                                                      {
+                                                                                          namespace:
+                                                                                              namespace.slug,
+                                                                                          path: item.path,
+                                                                                      },
+                                                                                  )
+                                                                                : show(
+                                                                                      item.id,
+                                                                                  )
+                                                                        }
+                                                                        prefetch
+                                                                        className={cn(
+                                                                            'block rounded px-1 py-0.5 text-muted-foreground hover:text-foreground',
+                                                                            item.id ===
+                                                                                document.id &&
+                                                                                'font-medium text-foreground',
+                                                                        )}
+                                                                    >
+                                                                        {
+                                                                            item.title
+                                                                        }
+                                                                    </Link>
+                                                                </li>
+                                                            ),
                                                         )}
-                                                    >
-                                                        {item.title}
-                                                    </Link>
-                                                </li>
-                                            ))}
-                                        </ul>
+                                                    </ul>
+                                                </div>
+                                            ),
+                                        )}
                                     </nav>
                                 </aside>
                             )}

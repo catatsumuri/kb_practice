@@ -28,3 +28,12 @@ test('its instructions keep emphasis renderable when a closing marker follows pu
 
     expect($instructions)->toContain('half-width space after the closing marker');
 });
+
+test('its instructions carry the Japanese glossary and spacing rule', function () {
+    $instructions = (string) (new TranslatorAgent)->instructions();
+
+    expect($instructions)
+        ->toContain('confidence = 確信度')
+        ->toContain('Playground')
+        ->toContain('do not put spaces between');
+});
