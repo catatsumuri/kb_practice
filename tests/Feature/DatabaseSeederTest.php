@@ -19,6 +19,10 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
+    expect($document->content)->toStartWith('# はじめに')
+        ->and($document->content)->not->toContain('llms.txt')
+        ->and($document->source_content)->toContain('llms.txt');
+
     expect($document->user_id)->toBe($users->first()->id)
         ->and($document->visibility)->toBe(DocumentVisibility::Public)
         ->and($document->document_type)->toBe(DocumentType::Translation)

@@ -1,7 +1,3 @@
-> ## ドキュメント索引 {#documentation-index}
-> ドキュメント全体の索引は次のURLで取得できます: https://docs.typesafe.ai/llms.txt
-> さらに詳しく調べる前に、このファイルで利用可能なページを確認してください。
-
 # はじめに {#introduction}
 
 > JevはTypeSafeのフラッグシップモデルであり、最初の System Oneモデルです。状態と型付きの質問を送ると、コードがそのまま使える構造化された回答が返ってきます。
