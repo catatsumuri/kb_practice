@@ -53,6 +53,11 @@ class DatabaseSeeder extends Seeder
                     'pages' => [
                         'concepts/system-one',
                         'concepts/state',
+                        'primitives',
+                        'primitives/choice',
+                        'primitives/score',
+                        'primitives/noul',
+                        'primitives/advanced',
                         'confidence',
                         'concepts/how-to-build-with-system-one',
                         'introduction/machine-learning-primer',
@@ -140,6 +145,20 @@ class DatabaseSeeder extends Seeder
             title: 'プリミティブ（質問）',
             sourceContent: File::get(database_path('seeders/typesafe-primitives-source.md')),
             content: File::get(database_path('seeders/typesafe-primitives-translation.md')),
+        );
+
+        // Imported from the source site but not translated yet, so the
+        // content is still the original text.
+        $choiceSource = File::get(database_path('seeders/typesafe-choice-source.md'));
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'primitives/choice',
+            sourceTitle: 'Choice',
+            title: 'Choice',
+            sourceContent: $choiceSource,
+            content: $choiceSource,
         );
     }
 

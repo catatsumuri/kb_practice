@@ -3,6 +3,7 @@
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
+use App\Models\DocumentNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -14,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(7);
+        ->and(Document::query()->count())->toBe(8);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -110,4 +111,37 @@ test('primitivesの翻訳済み本文がシードされ、平坦化したコー�
         ->and($document->content)->toContain('<Columns cols={3}>')
         ->and($document->content)->toContain('<Card title="Score" href="/primitives/score" icon="gauge">')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('primitives/choiceは平坦化した原本を取り込んだだけで未翻訳のままシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'primitives/choice')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/primitives/choice.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/choice')
+        ->and($document->source_content)->not->toContain('TypesafeExample')
+        ->and(substr_count($document->source_content, '```json title="request" theme={null}'))->toBe(3)
+        ->and($document->content)->toBe($document->source_content)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('typesafeのナビゲーションは原本どおりPrimitives系のページをStateとConfidenceの間に並べる', function () {
+    $this->seed();
+
+    $concepts = collect(DocumentNamespace::query()->where('slug', 'typesafe')->sole()->navigation)
+        ->firstWhere('title', 'コンセプト');
+
+    expect($concepts['pages'])->toBe([
+        'concepts/system-one',
+        'concepts/state',
+        'primitives',
+        'primitives/choice',
+        'primitives/score',
+        'primitives/noul',
+        'primitives/advanced',
+        'confidence',
+        'concepts/how-to-build-with-system-one',
+        'introduction/machine-learning-primer',
+    ]);
 });
