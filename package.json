@@ -30,7 +30,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
-        "@catatsumuri/inkstream": "git+https://github.com/catatsumuri/inkstream.git#e126dc042a759683b27429092f8cb0111b344fa3",
+        "@catatsumuri/inkstream": "^0.3.0",
         "@codemirror/lang-markdown": "^6.5.1",
         "@erag/lang-sync-inertia": "^3.0.0",
         "@inertiajs/react": "^3.0.0",
@@ -62,10 +62,13 @@
         "input-otp": "^1.4.2",
         "laravel-vite-plugin": "^3.0.0",
         "lucide-react": "^0.475.0",
+        "mermaid": "^12.0.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "react-markdown": "^10.1.0",
+        "recharts": "^3.8.1",
         "remark-gfm": "^4.0.1",
+        "shiki": "^4.3.1",
         "sonner": "^2.0.0",
         "tailwind-merge": "^3.0.1",
         "tailwindcss": "^4.0.0",

@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentNamespaceController;
+use App\Http\Controllers\OgpController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -14,6 +15,14 @@ Route::inertia('/', 'welcome')->name('home');
 Route::get('documents/{document}', [DocumentController::class, 'show'])
     ->whereNumber('document')
     ->name('documents.show');
+
+// Also public (rendered documents need working link-preview cards for
+// guests too) and, like documents/{namespace}/create below, registered
+// before the documents/{namespace} wildcard route so the literal "ogp"
+// segment isn't swallowed as a namespace slug.
+Route::get('documents/ogp', [OgpController::class, 'fetch'])
+    ->middleware('throttle:60,1')
+    ->name('documents.ogp');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

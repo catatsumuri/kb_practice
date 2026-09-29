@@ -1,6 +1,8 @@
 import { Form, Head, Link, setLayoutProps, usePage } from '@inertiajs/react';
 import { lang } from '@erag/lang-sync-inertia/react';
 import { extractMarkdownHeadings } from '@catatsumuri/inkstream';
+import type { ResolveWikilink } from '@catatsumuri/inkstream';
+import { InkstreamMarkdown } from '@catatsumuri/inkstream/react';
 import {
     PanelLeftClose,
     PanelLeftOpen,
@@ -8,9 +10,8 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import {
+    create,
     destroy,
     edit,
     index,
@@ -18,6 +19,7 @@ import {
     showByPath,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { show as showNamespace } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
+import { fetch as fetchOgp } from '@/actions/App/Http/Controllers/OgpController';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,8 +34,8 @@ import {
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
+import { useSyncedScroll } from '@/hooks/use-synced-scroll';
 import { visibilityLabels } from '@/lib/document';
-import { headingComponents } from '@/lib/markdown-headings';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -69,6 +71,13 @@ export default function ShowDocument({
         true,
     );
     const navBeforeSourceRef = useRef(showNav);
+    const translationPaneRef = useRef<HTMLDivElement>(null);
+    const sourcePaneRef = useRef<HTMLDivElement>(null);
+    const splitViewVisible = Boolean(document.source_content) && showSource;
+
+    useSyncedScroll(translationPaneRef, sourcePaneRef, {
+        enabled: splitViewVisible,
+    });
 
     // Comparing translation and original side by side already needs both
     // columns' worth of room, so showing the source view hides the left
@@ -89,6 +98,41 @@ export default function ShowDocument({
         () => extractMarkdownHeadings(document.content),
         [document.content],
     );
+
+    // Resolves [[Title]] wikilinks against this document's namespace
+    // siblings (already permission-filtered server-side via
+    // namespaceDocuments). An unresolved title links to that namespace's
+    // create form instead — a "red link" the reader can follow to write
+    // the missing page, the same convention as e.g. Wikipedia.
+    const resolveWikilink: ResolveWikilink | undefined = useMemo(() => {
+        if (!namespace) {
+            return undefined;
+        }
+
+        const byTitle = new Map(
+            namespaceDocuments.map((item) => [item.title, item]),
+        );
+
+        return (path) => {
+            const target = byTitle.get(path);
+
+            if (!target) {
+                return { url: create(namespace.slug).url, exists: false };
+            }
+
+            return {
+                url: target.path
+                    ? showByPath({
+                          namespace: namespace.slug,
+                          path: target.path,
+                      }).url
+                    : show(target.id).url,
+                exists: true,
+            };
+        };
+    }, [namespace, namespaceDocuments]);
+
+    const ogpEndpoint = fetchOgp().url;
 
     // Owners get the full "ドキュメント > namespace > title" trail. Everyone
     // else (other logged-in users and guests, i.e. "public mode") only ever
@@ -282,45 +326,59 @@ export default function ShowDocument({
                             )}
 
                             <div className="min-w-0 lg:flex-1">
-                                {hasSource && showSource ? (
+                                {document.source_content && showSource ? (
                                     <div className="grid gap-4 md:grid-cols-2">
                                         <div className="rounded-md border">
                                             <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
                                                 {__('Translation')}
                                             </p>
-                                            <div className="markdown-content p-4">
-                                                <Markdown
-                                                    remarkPlugins={[remarkGfm]}
-                                                    components={
-                                                        headingComponents
+                                            <div
+                                                ref={translationPaneRef}
+                                                className="overflow-y-auto p-4"
+                                                style={{
+                                                    maxHeight:
+                                                        'calc(100vh - 2rem)',
+                                                }}
+                                            >
+                                                <InkstreamMarkdown
+                                                    ogpEndpoint={ogpEndpoint}
+                                                    resolveWikilink={
+                                                        resolveWikilink
                                                     }
                                                 >
                                                     {document.content}
-                                                </Markdown>
+                                                </InkstreamMarkdown>
                                             </div>
                                         </div>
                                         <div className="rounded-md border">
                                             <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
                                                 {__('Original')}
                                             </p>
-                                            <div className="markdown-content p-4">
-                                                <Markdown
-                                                    remarkPlugins={[remarkGfm]}
+                                            <div
+                                                ref={sourcePaneRef}
+                                                className="overflow-y-auto p-4"
+                                                style={{
+                                                    maxHeight:
+                                                        'calc(100vh - 2rem)',
+                                                }}
+                                            >
+                                                <InkstreamMarkdown
+                                                    ogpEndpoint={ogpEndpoint}
                                                 >
-                                                    {document.source_content}
-                                                </Markdown>
+                                                    {
+                                                        document.source_content
+                                                    }
+                                                </InkstreamMarkdown>
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="markdown-content">
-                                        <Markdown
-                                            remarkPlugins={[remarkGfm]}
-                                            components={headingComponents}
-                                        >
-                                            {document.content}
-                                        </Markdown>
-                                    </div>
+                                    <InkstreamMarkdown
+                                        ogpEndpoint={ogpEndpoint}
+                                        resolveWikilink={resolveWikilink}
+                                    >
+                                        {document.content}
+                                    </InkstreamMarkdown>
                                 )}
                             </div>
 

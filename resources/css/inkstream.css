@@ -1,0 +1,37 @@
+/*
+ * Bridges kb_practice's shadcn/ui-style theme tokens into inkstream's
+ * default stylesheet, so documents rendered through InkstreamMarkdown pick
+ * up this app's colors (light and dark) instead of inkstream's neutral
+ * zinc-style defaults.
+ */
+@import '@catatsumuri/inkstream/styles.css';
+
+:root {
+    --ink-border: var(--border);
+    --ink-foreground: var(--foreground);
+    --ink-muted: var(--muted);
+    --ink-muted-foreground: var(--muted-foreground);
+    --ink-primary: var(--primary);
+    --ink-primary-foreground: var(--primary-foreground);
+    --ink-accent: var(--accent);
+    --ink-card: var(--card);
+}
+
+[data-slot='card']:has(.ink-markdown),
+[data-slot='card-content']:has(.ink-markdown) {
+    min-width: 0;
+}
+
+/*
+ * inkstream's own stylesheet only sets heading font-size/weight, not
+ * spacing (it leaves vertical rhythm to the consumer). Without this,
+ * headings sit flush against the text above and below them.
+ */
+.ink-markdown :where(h1, h2, h3, h4, h5, h6) {
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.ink-markdown :where(h1, h2, h3, h4, h5, h6):first-child {
+    margin-top: 0;
+}

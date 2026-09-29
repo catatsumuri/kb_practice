@@ -2,6 +2,8 @@
 
 @import 'tw-animate-css';
 
+@import './inkstream.css';
+
 @plugin '@tailwindcss/typography';
 
 @source '../views';

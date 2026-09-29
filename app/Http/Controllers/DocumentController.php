@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Ai\Agents\TranslatorAgent;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
+use App\Http\Controllers\Concerns\ValidatesFetchableUrls;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\DocumentRevision;
@@ -21,6 +22,8 @@ use Inertia\Response;
 
 class DocumentController extends Controller
 {
+    use ValidatesFetchableUrls;
+
     /**
      * Display a listing of the resource.
      */
@@ -208,7 +211,7 @@ class DocumentController extends Controller
      */
     private function fetchAndParseSource(string $url): array
     {
-        $this->assertUrlIsFetchable($url);
+        $this->assertUrlIsFetchable($url, 'source_url');
 
         try {
             $content = Http::timeout(10)->get($url)->throw()->body();
@@ -245,24 +248,6 @@ class DocumentController extends Controller
         }
 
         return $snapshot;
-    }
-
-    /**
-     * Reject hosts that resolve to private, loopback, or otherwise reserved
-     * IP ranges, so this can't be used to probe the server's internal network.
-     */
-    private function assertUrlIsFetchable(string $url): void
-    {
-        $host = parse_url($url, PHP_URL_HOST);
-        $ip = $host !== null && filter_var($host, FILTER_VALIDATE_IP)
-            ? $host
-            : gethostbyname((string) $host);
-
-        if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-            throw ValidationException::withMessages([
-                'source_url' => 'このURLからは取得できません。',
-            ]);
-        }
     }
 
     /**

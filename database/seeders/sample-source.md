@@ -1,8 +1,8 @@
-> ## Documentation Index
+> ## Documentation Index {#documentation-index}
 > Fetch the complete documentation index at: https://docs.typesafe.ai/llms.txt
 > Use this file to discover all available pages before exploring further.
 
-# Introduction
+# Introduction {#introduction}
 
 > Jev is TypeSafe's flagship model and the first System One model. Send state and typed questions; get structured answers your code can use directly.
 
@@ -24,7 +24,7 @@ flowchart LR
     answers --> code["<b>your code</b><br/>branch, sort, and route"]
 ```
 
-## TypeSafe primitives
+## TypeSafe primitives {#typesafe-primitives}
 
 TypeSafe exposes three *AI primitives*. Similar to software primitives, our AI primitives are modular, composable, structured, reliable, and fast. Each asks a different type of *question* and returns a different type of answer.
 
@@ -36,7 +36,7 @@ TypeSafe exposes three *AI primitives*. Similar to software primitives, our AI p
 
 All three *question* types can be mixed in a single API call. Every *question* is evaluated in parallel and in isolation against the same *state* in one go. Adding questions barely changes the response time. Each question is evaluated independently, so adding more questions does not create context-rot.
 
-## Atomic questions, composed in code
+## Atomic questions, composed in code {#atomic-questions-composed-in-code}
 
 System One models work best when each question asks one specific, well-scoped thing. Think of each question as a gut-check determination: the kind of judgment a highly knowledgeable person could make in a few seconds given the right context.
 
@@ -44,7 +44,7 @@ If the question you want to ask would require extended reasoning or weighs multi
 
 For example, instead of "rate this startup pitch," ask separately about market size, technical feasibility, and differentiation. Combine the scores with your own formula. When priorities shift, change a coefficient in your code rather than rewriting a prompt.
 
-## Next steps
+## Next steps {#next-steps}
 
 * [Quick Start](/introduction/quickstart) — Everything you need to get started immediately.
 * [AI Primer](/introduction/machine-learning-primer) — Why TypeSafe trains models for calibrated decisions instead of generated text.
