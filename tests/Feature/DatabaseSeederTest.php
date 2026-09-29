@@ -14,7 +14,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(6);
+        ->and(Document::query()->count())->toBe(7);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -92,5 +92,22 @@ test('stateの翻訳済み本文がシードされ、コードブロックは原
         ->and($document->source_content)->toStartWith('> ## Documentation Index')
         ->and($document->content)->toStartWith('# 状態')
         ->and($document->content)->toContain('"refund_policy": "Duplicate charges are eligible for a refund."')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('primitivesの翻訳済み本文がシードされ、平坦化したコードブロックとJSX属性は原文のまま残る', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'primitives')->sole();
+
+    expect($document->title)->toBe('プリミティブ（質問）')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/primitives.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives')
+        ->and($document->source_content)->not->toContain('export function')
+        ->and($document->source_content)->not->toContain('TypesafeExample')
+        ->and($document->content)->toStartWith('# プリミティブ（質問）')
+        ->and($document->content)->toContain('```json title="request" theme={null}')
+        ->and($document->content)->toContain('<Columns cols={3}>')
+        ->and($document->content)->toContain('<Card title="Score" href="/primitives/score" icon="gauge">')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
