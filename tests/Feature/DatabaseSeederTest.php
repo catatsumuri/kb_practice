@@ -150,7 +150,7 @@ test('typesafeのナビゲーションは原本どおりPrimitives系のペー�
     ]);
 });
 
-test('primitives/scoreは対話式ウィジェットを除いた原本を取り込んだだけで未翻訳のままシードされる', function () {
+test('primitives/scoreの翻訳済み本文がシードされ、HTMLの表はMarkdownの表に平坦化されている', function () {
     $this->seed();
 
     $document = Document::query()->where('path', 'primitives/score')->sole();
@@ -158,8 +158,10 @@ test('primitives/scoreは対話式ウィジェットを除いた原本を取り�
     expect($document->source_url)->toBe('https://docs.typesafe.ai/primitives/score.md')
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/score')
         ->and($document->source_content)->not->toContain('ScoreExplorer')
-        ->and($document->source_content)->not->toContain('export function')
-        ->and(substr_count($document->source_content, '```json title='))->toBe(3)
-        ->and($document->content)->toBe($document->source_content)
+        ->and($document->source_content)->not->toContain('<table')
+        ->and($document->content)->toStartWith('# Score')
+        ->and($document->content)->not->toContain('<table')
+        ->and($document->content)->toContain('| 状態 | `score` | `confidence` | `probabilities`：レベル0')
+        ->and(substr_count($document->content, '```json title='))->toBe(3)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
