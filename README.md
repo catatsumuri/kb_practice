@@ -11,7 +11,7 @@ A fork of the official [Laravel React starter kit](https://laravel.com/docs/star
 
 ## Requirements
 
-- PHP 8.2+
+- PHP 8.3+
 - Node 20+
 - A database supported by Laravel (SQLite works for local dev)
 
@@ -37,7 +37,7 @@ To add a new locale (e.g. `ko`):
 ## Installation
 
 ```bash
-composer create-project your-vendor/react-starter-kit-i18n my-app
+composer create-project catatsumuri/react-starter-kit-i18n my-app
 cd my-app
 composer setup
 ```
@@ -102,9 +102,9 @@ __('Log in')  →  "ログイン"
 
 ```bash
 composer lint          # PHP (Pint)
-npm run lint           # JS/TS (ESLint)
+npm run check          # JS/TS lint & format checks
 npm run types:check    # TypeScript
-composer test          # PHPUnit / Pest
+composer test          # PHPUnit
 composer ci:check      # all of the above
 ```
 

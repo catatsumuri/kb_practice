@@ -1,11 +1,15 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "catatsumuri/react-starter-kit-i18n",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "A fork of the official Laravel + React starter kit with built-in internationalization (i18n) support.",
     "keywords": [
         "laravel",
-        "framework"
+        "framework",
+        "react",
+        "inertia",
+        "i18n",
+        "localization"
     ],
     "license": "MIT",
     "require": {
@@ -68,8 +72,7 @@
         ],
         "ci:check": [
             "Composer\\Config::disableProcessTimeout",
-            "npm run lint:check",
-            "npm run format:check",
+            "npm run check",
             "npm run types:check",
             "@test"
         ],

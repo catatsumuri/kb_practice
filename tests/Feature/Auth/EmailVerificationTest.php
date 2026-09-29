@@ -40,6 +40,14 @@ test('メールアドレスを認証できる', function () {
     $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
 });
 
+test('未認証ユーザーはメール認証案内へリダイレクトされる', function () {
+    $user = User::factory()->unverified()->create();
+
+    $response = $this->actingAs($user)->get(route('appearance.edit'));
+
+    $response->assertRedirect(route('verification.notice'));
+});
+
 test('無効なハッシュではメールアドレスは認証されない', function () {
     $user = User::factory()->unverified()->create();
 
