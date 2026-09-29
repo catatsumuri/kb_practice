@@ -16,10 +16,63 @@ class NormalizeSourceMarkdown
     public function __invoke(string $markdown): string
     {
         return $this->addHeadingAnchors(
-            $this->flattenHtmlTables(
-                $this->removeInteractiveWidgets($this->flattenTypesafeExamples($markdown)),
+            $this->flattenImages(
+                $this->flattenHtmlTables(
+                    $this->removeInteractiveWidgets($this->flattenTypesafeExamples($markdown)),
+                ),
             ),
         );
+    }
+
+    /**
+     * Turn raw `<img>` tags (optionally wrapped in a Mintlify `<Frame>`)
+     * into Markdown images. Mintlify pairs a light and a dark variant and
+     * shows one via Tailwind classes (`block dark:hidden` / `hidden
+     * dark:block`); those become `#only-light` / `#only-dark` fragments on
+     * the image URL so the stylesheet can pick one per theme. Images still
+     * point at the source site's CDN.
+     */
+    public function flattenImages(string $markdown): string
+    {
+        $markdown = preg_replace_callback(
+            '/^([ \t]*)<Frame\b[^>]*>\s*(.*?)\s*<\/Frame>[ \t]*$/ms',
+            fn (array $match) => $this->imagesToMarkdown($match[2], $match[1]),
+            $markdown,
+        );
+
+        return preg_replace_callback(
+            '/^([ \t]*)((?:<img\b[^>]*>[ \t]*)+)$/m',
+            fn (array $match) => $this->imagesToMarkdown($match[2], $match[1]),
+            $markdown,
+        );
+    }
+
+    /**
+     * Convert every `<img>` in `$html` to a Markdown image, one per
+     * paragraph, each line prefixed with `$indent`.
+     */
+    private function imagesToMarkdown(string $html, string $indent): string
+    {
+        preg_match_all('/<img\b([^>]*?)\/?>/s', $html, $images);
+
+        return collect($images[1])
+            ->map(function (string $attributes) use ($indent) {
+                $attribute = fn (string $name) => preg_match('/\b'.$name.'=(?:"([^"]*)"|\{"([^"]*)"\})/', $attributes, $m) === 1
+                    ? ($m[1] !== '' ? $m[1] : ($m[2] ?? ''))
+                    : '';
+
+                $classes = $attribute('className').' '.$attribute('class');
+                $variant = match (true) {
+                    str_contains($classes, 'dark:hidden') => '#only-light',
+                    str_contains($classes, 'dark:block') => '#only-dark',
+                    default => '',
+                };
+
+                $alt = str_replace(['[', ']'], '', $attribute('alt'));
+
+                return "{$indent}![{$alt}](".$attribute('src').(str_contains($attribute('src'), '#') ? '' : $variant).')';
+            })
+            ->implode("\n\n");
     }
 
     /**
@@ -144,9 +197,19 @@ class NormalizeSourceMarkdown
         while (($start = strpos($markdown, '<TypesafeExample')) !== false) {
             $example = $this->evaluateTypesafeExample(substr($markdown, $start));
 
-            $markdown = substr($markdown, 0, $start)
-                ."```json title=\"{$example['title']}\" theme={null}\n{$example['code']}\n```"
-                .substr($markdown, $start + $example['length']);
+            // A call nested in <Step>/<Accordion> is indented; the block that
+            // replaces it must keep that indentation on every line.
+            $lineStart = strrpos(substr($markdown, 0, $start), "\n");
+            $indent = substr($markdown, $lineStart === false ? 0 : $lineStart + 1, $start - ($lineStart === false ? 0 : $lineStart + 1));
+            $indent = trim($indent) === '' ? $indent : '';
+
+            $block = collect([
+                "```json title=\"{$example['title']}\" theme={null}",
+                ...explode("\n", $example['code']),
+                '```',
+            ])->implode("\n".$indent);
+
+            $markdown = substr($markdown, 0, $start).$block.substr($markdown, $start + $example['length']);
         }
 
         return $markdown;

@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(12);
+        ->and(Document::query()->count())->toBe(13);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -209,5 +209,22 @@ test('confidenceの翻訳済み本文がシードされ、コード内の識別�
         ->and(substr_count($document->content, '<Note>'))->toBe(2)
         ->and($document->content)->toContain('state=user_message,')
         ->and($document->content)->toContain('route_to_human(user_message)')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('how-to-buildは画像とTypesafeExampleを平坦化した原本を取り込んだだけで未翻訳のままシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'concepts/how-to-build-with-system-one')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/concepts/how-to-build-with-system-one.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/how-to-build-with-system-one')
+        ->and($document->source_content)->not->toContain('<img')
+        ->and($document->source_content)->not->toContain('<Frame')
+        ->and($document->source_content)->not->toContain('TypesafeExample')
+        ->and($document->source_content)->toContain('#only-light)')
+        ->and($document->source_content)->toContain('#only-dark)')
+        ->and(substr_count($document->source_content, '```json title='))->toBe(8)
+        ->and($document->content)->toBe($document->source_content)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

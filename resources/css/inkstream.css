@@ -35,3 +35,20 @@
 .ink-markdown :where(h1, h2, h3, h4, h5, h6):first-child {
     margin-top: 0;
 }
+
+/*
+ * Mintlify pairs a light and a dark variant of an image and shows one per
+ * theme. The importer keeps both, tagging their URLs with #only-light and
+ * #only-dark, and this picks the one that matches the current theme.
+ */
+.ink-markdown img[src$='#only-dark'] {
+    display: none;
+}
+
+.dark .ink-markdown img[src$='#only-dark'] {
+    display: block;
+}
+
+.dark .ink-markdown img[src$='#only-light'] {
+    display: none;
+}

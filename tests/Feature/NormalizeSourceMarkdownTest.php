@@ -171,3 +171,50 @@ test('markdown without an HTML table is left untouched by the table flattening',
 
     expect(app(NormalizeSourceMarkdown::class)->flattenHtmlTables($markdown))->toBe($markdown);
 });
+
+test('a Frame with light and dark images becomes two Markdown images tagged by theme', function () {
+    $markdown = <<<'MD'
+        Before.
+
+        <Frame>
+          <img className="block dark:hidden" src="https://cdn.example.test/a-light.webp?fit=max&s=1" alt="A [diagram]" width="10" height="10" />
+
+          <img className="hidden dark:block" src="https://cdn.example.test/a-dark.webp?fit=max&s=2" alt="A [diagram]" width="10" height="10" />
+        </Frame>
+
+        After.
+        MD;
+
+    $result = app(NormalizeSourceMarkdown::class)->flattenImages($markdown);
+
+    expect($result)
+        ->not->toContain('<Frame')
+        ->not->toContain('<img')
+        ->toContain('![A diagram](https://cdn.example.test/a-light.webp?fit=max&s=1#only-light)')
+        ->toContain('![A diagram](https://cdn.example.test/a-dark.webp?fit=max&s=2#only-dark)')
+        ->toContain("Before.\n\n![A diagram]")
+        ->toContain("#only-dark)\n\nAfter.");
+});
+
+test('a plain img tag without a Frame becomes a Markdown image without a theme tag', function () {
+    $markdown = "Intro.\n\n<img src=\"https://cdn.example.test/chart.png\" alt=\"Chart\" width=\"5\" height=\"5\" />\n\nOutro.\n";
+
+    $result = app(NormalizeSourceMarkdown::class)->flattenImages($markdown);
+
+    expect($result)->toBe("Intro.\n\n![Chart](https://cdn.example.test/chart.png)\n\nOutro.\n");
+});
+
+test('a call nested in an indented container keeps its indentation on every generated line', function () {
+    $markdown = "<Accordion title=\"Example\">\n"
+        ."      <TypesafeExample example={{ questions: { a: { type: 'noul', instructions: 'A?' } } }} />\n"
+        .'</Accordion>';
+
+    $result = app(NormalizeSourceMarkdown::class)->flattenTypesafeExamples($markdown);
+
+    $lines = explode("\n", $result);
+
+    expect($lines[1])->toBe('      ```json title="request" theme={null}')
+        ->and($lines[2])->toBe('      {')
+        ->and($lines[count($lines) - 2])->toBe('      ```')
+        ->and($lines[count($lines) - 1])->toBe('</Accordion>');
+});
