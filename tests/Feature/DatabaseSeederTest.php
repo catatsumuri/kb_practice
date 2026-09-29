@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(9);
+        ->and(Document::query()->count())->toBe(10);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -163,5 +163,20 @@ test('primitives/scoreの翻訳済み本文がシードされ、HTMLの表はMar
         ->and($document->content)->not->toContain('<table')
         ->and($document->content)->toContain('| 状態 | `score` | `confidence` | `probabilities`：レベル0')
         ->and(substr_count($document->content, '```json title='))->toBe(3)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('primitives/noulの翻訳済み本文がシードされ、criteriaのキーは原文のまま残る', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'primitives/noul')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/primitives/noul.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/noul')
+        ->and($document->source_content)->not->toContain('TypesafeExample')
+        ->and($document->content)->toStartWith('# Noul')
+        ->and(substr_count($document->content, '```json title='))->toBe(2)
+        ->and($document->content)->toContain('"type": "noul"')
+        ->and($document->content)->toContain('"true": "以前の試み')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
