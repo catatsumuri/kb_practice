@@ -36,7 +36,7 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
-import { visibilityLabels } from '@/lib/document';
+import { documentHref, visibilityLabels } from '@/lib/document';
 import { createRelativeLinkComponent } from '@/lib/relative-links';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
@@ -212,7 +212,7 @@ export default function ShowDocument({
     // regardless of whether that namespace is open or closed. A namespace-
     // less document falls back to the dashboard crumb for logged-in users,
     // or drops the parent crumb entirely for guests, who can't reach it.
-    const titleCrumb = { title: document.title, href: show(document.id) };
+    const titleCrumb = { title: document.title, href: documentHref(document) };
 
     setLayoutProps({
         wide: true,

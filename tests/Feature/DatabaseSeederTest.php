@@ -8,15 +8,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('2人のテストユーザーとTypeSafeドキュメントの翻訳サンプルを1件作成する', function () {
+test('2人のテストユーザーとTypeSafeドキュメントの翻訳サンプルを作成する', function () {
     $this->seed();
 
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(1);
+        ->and(Document::query()->count())->toBe(2);
 
-    $document = Document::query()->sole();
+    $document = Document::query()->where('path', 'introduction')->sole();
 
     expect($document->user_id)->toBe($users->first()->id)
         ->and($document->visibility)->toBe(DocumentVisibility::Public)
@@ -25,4 +25,15 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
         ->and($document->source_url)->toBe('https://docs.typesafe.ai/introduction.md')
         ->and($document->source_author)->toBe('TypeSafe')
         ->and($document->source_content)->not->toBeEmpty();
+});
+
+test('quickstartの翻訳済み本文がシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'introduction/quickstart')->sole();
+
+    expect($document->title)->toBe('クイックスタート')
+        ->and($document->content)->toStartWith('# クイックスタート')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

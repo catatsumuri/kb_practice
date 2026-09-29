@@ -823,3 +823,42 @@ test('別のドキュメントに属するリビジョンは復元できない',
         ->post(route('documents.revisions.restore', [$document, $revision]))
         ->assertNotFound();
 });
+
+test('名前空間に属するドキュメントのID URLはslug URLへリダイレクトされる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['slug' => 'typesafe', 'is_public' => true]);
+    $document = Document::factory()->for($user)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction/quickstart',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->get(route('documents.show', $document))
+        ->assertRedirect(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction/quickstart']));
+});
+
+test('非公開ドキュメントのID URLはslugを漏らさず認可エラーになる', function () {
+    $namespace = DocumentNamespace::factory()->create(['slug' => 'typesafe']);
+    $document = Document::factory()->for(User::factory()->create())->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'secret',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+
+    $this->get(route('documents.show', $document))->assertForbidden();
+});
+
+test('ダッシュボードは名前空間のslugとpathを渡す', function () {
+    $namespace = DocumentNamespace::factory()->create(['slug' => 'typesafe']);
+    Document::factory()->for(User::factory()->create())->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('documents.0.path', 'introduction')
+            ->where('documents.0.namespace.slug', 'typesafe'));
+});

@@ -1,6 +1,5 @@
 import { lang } from '@erag/lang-sync-inertia/react';
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { show } from '@/actions/App/Http/Controllers/DocumentController';
 import { DocumentMeta } from '@/components/document-meta';
 import {
     Card,
@@ -8,13 +7,14 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { documentHref } from '@/lib/document';
 import { dashboard } from '@/routes';
 import type { DocumentWithUser } from '@/types';
 
 type DashboardProps = {
     documents: Pick<
         DocumentWithUser,
-        'id' | 'title' | 'created_at' | 'user'
+        'id' | 'path' | 'title' | 'created_at' | 'user' | 'namespace'
     >[];
 };
 
@@ -60,7 +60,7 @@ export default function Dashboard({ documents }: DashboardProps) {
                             <li key={document.id}>
                                 <Link
                                     className="block h-full"
-                                    href={show(document.id)}
+                                    href={documentHref(document)}
                                     prefetch
                                 >
                                     <Card className="h-full transition-colors hover:bg-muted/50">

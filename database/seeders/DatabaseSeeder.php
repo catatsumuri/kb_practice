@@ -65,5 +65,30 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $introduction->update(['document_source_snapshot_id' => $introductionSnapshot->id]);
+
+        $quickstartSource = File::get(database_path('seeders/typesafe-quickstart-source.md'));
+
+        $quickstart = Document::factory()->for($users[0])->create([
+            'document_namespace_id' => $typesafeNamespace->id,
+            'path' => 'introduction/quickstart',
+            'title' => 'クイックスタート',
+            'content' => File::get(database_path('seeders/typesafe-quickstart-translation.md')),
+            'visibility' => DocumentVisibility::Public,
+            'document_type' => DocumentType::Translation,
+            'source_title' => 'Quick start',
+            'source_url' => 'https://docs.typesafe.ai/introduction/quickstart.md',
+            'canonical_url' => 'https://docs.typesafe.ai/introduction/quickstart',
+            'source_author' => 'TypeSafe',
+            'source_content' => $quickstartSource,
+        ]);
+
+        $quickstartSnapshot = $quickstart->sourceSnapshots()->create([
+            'content' => $quickstartSource,
+            'content_hash' => hash('sha256', $quickstartSource),
+            'title' => 'Quick start',
+            'fetched_at' => now(),
+        ]);
+
+        $quickstart->update(['document_source_snapshot_id' => $quickstartSnapshot->id]);
     }
 }

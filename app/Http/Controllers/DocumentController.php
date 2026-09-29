@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Ai\Agents\TranslatorAgent;
+use App\Actions\TranslateDocument;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Http\Controllers\Concerns\ValidatesFetchableUrls;
@@ -263,11 +263,28 @@ class DocumentController extends Controller
     /**
      * Display the specified resource. Public documents are viewable by
      * guests; private documents require the owner to be authenticated.
+     * A document in a namespace is redirected to its slug/path URL so that
+     * URL is the only canonical address.
      */
-    public function show(Request $request, Document $document): Response
+    public function show(Request $request, Document $document): Response|RedirectResponse
     {
         Gate::authorize('view', $document);
 
+        if ($document->document_namespace_id !== null && filled($document->path)) {
+            return redirect()->route('documents.show-by-path', [
+                'namespace' => $document->namespace,
+                'path' => $document->path,
+            ]);
+        }
+
+        return $this->renderShow($request, $document);
+    }
+
+    /**
+     * Render the document page. Authorization is the caller's job.
+     */
+    private function renderShow(Request $request, Document $document): Response
+    {
         return Inertia::render('documents/show', [
             ...$this->forDisplay($request, $document),
             'can' => [
@@ -280,14 +297,16 @@ class DocumentController extends Controller
     /**
      * Display the specified resource, addressed by its namespace's slug and
      * its own path rather than its numeric id
-     * (e.g. /documents/typesafe/introduction). Delegates entirely to show()
-     * so authorization and the rendered page/props stay identical.
+     * (e.g. /documents/typesafe/introduction). Shares the page/props with
+     * show(), after the same authorization.
      */
     public function showByPath(Request $request, DocumentNamespace $namespace, string $path): Response
     {
         $document = $namespace->documents()->where('path', $path)->firstOrFail();
 
-        return $this->show($request, $document);
+        Gate::authorize('view', $document);
+
+        return $this->renderShow($request, $document);
     }
 
     /**
@@ -332,7 +351,7 @@ class DocumentController extends Controller
     {
         Gate::authorize('update', $document);
 
-        $document->load('adoptedSourceSnapshot');
+        $document->load(['adoptedSourceSnapshot', 'namespace:id,slug']);
 
         $latestSnapshot = $document->sourceSnapshots()->latest('fetched_at')->first();
         $pendingSnapshot = $latestSnapshot && $latestSnapshot->id !== $document->document_source_snapshot_id
@@ -354,18 +373,15 @@ class DocumentController extends Controller
 
     /**
      * Overwrite the document's content with an AI translation of its source.
-     *
-     * Runs synchronously for now; move to a queued job if translations of
-     * longer articles make this too slow for a request/response cycle.
      */
-    public function translate(Request $request, Document $document): RedirectResponse
+    public function translate(Request $request, Document $document, TranslateDocument $translateDocument): RedirectResponse
     {
         Gate::authorize('update', $document);
 
         abort_if(blank($document->source_content), 422);
 
         try {
-            $response = (new TranslatorAgent)->prompt($document->source_content);
+            $translateDocument($document, $request->user()->id);
         } catch (\Throwable) {
             Inertia::flash('toast', [
                 'type' => 'error',
@@ -374,12 +390,6 @@ class DocumentController extends Controller
 
             return back();
         }
-
-        if ($document->content !== $response->text) {
-            $this->recordRevision($document, $request->user()->id);
-        }
-
-        $document->update(['content' => $response->text]);
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -413,7 +423,7 @@ class DocumentController extends Controller
             'message' => 'ドキュメントを更新しました',
         ]);
 
-        return to_route('documents.show', $document);
+        return $this->redirectToShow($document);
     }
 
     /**
@@ -440,6 +450,16 @@ class DocumentController extends Controller
         ]);
 
         return to_route('documents.edit', $document);
+    }
+
+    /**
+     * Redirect to the document's canonical page.
+     */
+    private function redirectToShow(Document $document): RedirectResponse
+    {
+        return $document->document_namespace_id !== null && filled($document->path)
+            ? to_route('documents.show-by-path', ['namespace' => $document->namespace, 'path' => $document->path])
+            : to_route('documents.show', $document);
     }
 
     /**

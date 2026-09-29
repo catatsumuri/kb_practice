@@ -84,6 +84,16 @@ class Document extends Model
     }
 
     /**
+     * The source text to hand to the translator: source_content without a
+     * leading blockquote that precedes the first heading (Mintlify's
+     * "Documentation Index" notice), which is not part of the article.
+     */
+    public function translationSource(): string
+    {
+        return preg_replace('/\A(?:>[^\n]*\n|\n)+(?=#\s)/', '', (string) $this->source_content);
+    }
+
+    /**
      * The source snapshot currently backing this document's source_content,
      * i.e. the version the user has explicitly adopted. Not necessarily the
      * most recent row in sourceSnapshots() — a newer snapshot may exist but

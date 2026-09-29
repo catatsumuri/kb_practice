@@ -22,3 +22,9 @@ test('its instructions target the app locale without being told the source langu
         ->toContain('"fr"')
         ->toContain('Identify the language of the');
 });
+
+test('its instructions keep emphasis renderable when a closing marker follows punctuation', function () {
+    $instructions = (string) (new TranslatorAgent)->instructions();
+
+    expect($instructions)->toContain('half-width space after the closing marker');
+});

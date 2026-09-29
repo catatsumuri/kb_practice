@@ -30,6 +30,11 @@ class TranslatorAgent implements Agent
             lists, links, tables, and code blocks. Do not translate code,
             URLs, or proper nouns that should stay untranslated.
 
+            Markdown emphasis must still render after translation. If a
+            closing "**" or "*" comes directly after punctuation such as ")"
+            or "」" and would be followed directly by a letter (e.g. Japanese
+            text), put a single half-width space after the closing marker.
+
             Respond with only the translated text. Do not add a preamble,
             explanation, or any note about the source language.
             INSTRUCTIONS;

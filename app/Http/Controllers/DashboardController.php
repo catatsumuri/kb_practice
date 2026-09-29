@@ -15,9 +15,9 @@ class DashboardController extends Controller
     public function __invoke(): Response
     {
         $documents = Document::query()
-            ->select(['id', 'user_id', 'title', 'created_at'])
+            ->select(['id', 'user_id', 'document_namespace_id', 'path', 'title', 'created_at'])
             ->where('visibility', DocumentVisibility::Public)
-            ->with('user:id,name')
+            ->with(['user:id,name', 'namespace:id,slug'])
             ->latest()
             ->get();
 
