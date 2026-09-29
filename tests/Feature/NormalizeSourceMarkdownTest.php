@@ -100,3 +100,74 @@ test('headings outside code fences get anchors and existing anchors are kept', f
         ->toContain("```bash\n# not a heading\n```")
         ->toContain('### Ask speculative questions {#ask-speculative-questions}');
 });
+
+test('interactive explorer widgets lose their definition and their call', function () {
+    $markdown = <<<'MD'
+        # Score
+
+        export function ScoreExplorer() {
+          const [selected, setSelected] = useState(0);
+          return <section>{selected}</section>;
+        }
+
+        Before.
+
+        <ScoreExplorer />
+
+        After.
+
+        <ConfidenceExplorer />
+        MD;
+
+    $result = app(NormalizeSourceMarkdown::class)->removeInteractiveWidgets($markdown);
+
+    expect($result)
+        ->not->toContain('Explorer')
+        ->not->toContain('export function')
+        ->toContain("Before.\n\nAfter.");
+});
+
+test('a raw HTML table with JSX attributes becomes a Markdown table with the spanning header folded in', function () {
+    $markdown = <<<'MD'
+        Intro.
+
+        <table>
+          <thead>
+            <tr>
+              <th colSpan={2} />
+              <th colSpan={2} style={{ textAlign: 'left' }}><code>probabilities</code></th>
+            </tr>
+
+            <tr>
+              <th style={{ width: '44%' }}>State</th>
+              <th><code>score</code></th>
+              <th>Level 0</th>
+              <th>Level 1</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>A | B</td>
+              <td>0.0</td><td>1.0</td><td>0.0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        Outro.
+        MD;
+
+    $result = app(NormalizeSourceMarkdown::class)->flattenHtmlTables($markdown);
+
+    expect($result)
+        ->not->toContain('<table')
+        ->toContain("| State | `score` | `probabilities`: Level 0 | `probabilities`: Level 1 |\n| - | - | - | - |\n| A \\| B | 0.0 | 1.0 | 0.0 |")
+        ->toContain('Intro.')
+        ->toContain('Outro.');
+});
+
+test('markdown without an HTML table is left untouched by the table flattening', function () {
+    $markdown = "| a | b |\n| - | - |\n| 1 | 2 |\n";
+
+    expect(app(NormalizeSourceMarkdown::class)->flattenHtmlTables($markdown))->toBe($markdown);
+});

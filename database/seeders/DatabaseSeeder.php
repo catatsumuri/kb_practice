@@ -156,6 +156,20 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-choice-source.md')),
             content: File::get(database_path('seeders/typesafe-choice-translation.md')),
         );
+
+        // Imported from the source site but not translated yet, so the
+        // content is still the original text.
+        $scoreSource = File::get(database_path('seeders/typesafe-score-source.md'));
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'primitives/score',
+            sourceTitle: 'Score',
+            title: 'Score',
+            sourceContent: $scoreSource,
+            content: $scoreSource,
+        );
     }
 
     /**

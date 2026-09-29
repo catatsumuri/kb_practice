@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(8);
+        ->and(Document::query()->count())->toBe(9);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -148,4 +148,18 @@ test('typesafeのナビゲーションは原本どおりPrimitives系のペー�
         'concepts/how-to-build-with-system-one',
         'introduction/machine-learning-primer',
     ]);
+});
+
+test('primitives/scoreは対話式ウィジェットを除いた原本を取り込んだだけで未翻訳のままシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'primitives/score')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/primitives/score.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/score')
+        ->and($document->source_content)->not->toContain('ScoreExplorer')
+        ->and($document->source_content)->not->toContain('export function')
+        ->and(substr_count($document->source_content, '```json title='))->toBe(3)
+        ->and($document->content)->toBe($document->source_content)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

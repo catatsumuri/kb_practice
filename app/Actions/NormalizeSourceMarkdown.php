@@ -15,7 +15,120 @@ class NormalizeSourceMarkdown
      */
     public function __invoke(string $markdown): string
     {
-        return $this->addHeadingAnchors($this->flattenTypesafeExamples($markdown));
+        return $this->addHeadingAnchors(
+            $this->flattenHtmlTables(
+                $this->removeInteractiveWidgets($this->flattenTypesafeExamples($markdown)),
+            ),
+        );
+    }
+
+    /**
+     * Turn each raw `<table>` (written in MDX with JSX attributes such as
+     * `colSpan={3}` and `style={{ ... }}`) into a Markdown table. Markdown
+     * tables have no colspan, so the labels of a spanning header row are
+     * prefixed onto the header row below it ("probabilities: Level 0").
+     */
+    public function flattenHtmlTables(string $markdown): string
+    {
+        return preg_replace_callback('/<table\b[^>]*>.*?<\/table>/s', function (array $match) {
+            $rows = $this->htmlTableRows($match[0]);
+            $headerRows = $rows['header'] === [] ? array_splice($rows['body'], 0, 1) : $rows['header'];
+
+            if ($headerRows === []) {
+                return $match[0];
+            }
+
+            $header = $this->collapseHeaderRows($headerRows);
+            $lines = [
+                '| '.implode(' | ', $header).' |',
+                '| '.implode(' | ', array_fill(0, count($header), '-')).' |',
+            ];
+
+            foreach ($rows['body'] as $row) {
+                $lines[] = '| '.implode(' | ', array_column($row, 'text')).' |';
+            }
+
+            return implode("\n", $lines);
+        }, $markdown);
+    }
+
+    /**
+     * @return array{header: list<list<array{text: string, span: int}>>, body: list<list<array{text: string, span: int}>>}
+     */
+    private function htmlTableRows(string $table): array
+    {
+        $section = fn (string $tag) => preg_match("/<{$tag}\\b[^>]*>(.*?)<\\/{$tag}>/s", $table, $m) === 1 ? $m[1] : '';
+
+        $parse = function (string $html): array {
+            preg_match_all('/<tr\b[^>]*>(.*?)<\/tr>/s', $html, $rows);
+
+            return array_map(function (string $row): array {
+                preg_match_all('/<(th|td)\b([^>]*?)(?:\/>|>(.*?)<\/\1>)/s', $row, $cells, PREG_SET_ORDER);
+
+                return array_map(fn (array $cell) => [
+                    'text' => $this->htmlCellText($cell[3] ?? ''),
+                    'span' => preg_match('/colSpan=(?:\{|")?(\d+)/i', $cell[2], $span) === 1 ? (int) $span[1] : 1,
+                ], $cells);
+            }, $rows[1]);
+        };
+
+        $hasSections = $section('thead') !== '' || $section('tbody') !== '';
+
+        return [
+            'header' => $parse($section('thead')),
+            'body' => $parse($hasSections ? $section('tbody') : $table),
+        ];
+    }
+
+    private function htmlCellText(string $html): string
+    {
+        $text = preg_replace('/<code\b[^>]*>(.*?)<\/code>/s', '`$1`', $html);
+        $text = html_entity_decode(strip_tags($text));
+
+        return str_replace('|', '\\|', trim(preg_replace('/\s+/', ' ', $text)));
+    }
+
+    /**
+     * Collapse stacked header rows into one, prefixing each column's label
+     * with the labels of the spanning cells above it.
+     *
+     * @param  list<list<array{text: string, span: int}>>  $headerRows
+     * @return list<string>
+     */
+    private function collapseHeaderRows(array $headerRows): array
+    {
+        $columns = [];
+
+        foreach ($headerRows as $row) {
+            $labels = [];
+
+            foreach ($row as $cell) {
+                array_push($labels, ...array_fill(0, $cell['span'], $cell['text']));
+            }
+
+            foreach ($labels as $index => $label) {
+                $columns[$index][] = $label;
+            }
+        }
+
+        return array_map(
+            fn (array $labels) => implode(': ', array_filter($labels, fn (string $label) => $label !== '')),
+            $columns,
+        );
+    }
+
+    /**
+     * Drop the interactive explorer widgets (ScoreExplorer,
+     * ConfidenceExplorer): both their inline `export function` definition and
+     * the `<... />` call. They only work as live React components and have
+     * no Markdown equivalent; the surrounding prose and code samples stand on
+     * their own.
+     */
+    public function removeInteractiveWidgets(string $markdown): string
+    {
+        $markdown = preg_replace('/^export function (?:ScoreExplorer|ConfidenceExplorer)\(.*?^\}\n\n?/ms', '', $markdown);
+
+        return preg_replace('/^<(?:ScoreExplorer|ConfidenceExplorer)\b[^>]*\/>(?:\n\n?|$)/m', '', $markdown);
     }
 
     /**
