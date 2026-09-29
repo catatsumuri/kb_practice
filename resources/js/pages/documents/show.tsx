@@ -10,6 +10,7 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
+import type { Components } from 'react-markdown';
 import {
     create,
     destroy,
@@ -36,6 +37,7 @@ import { DocumentMeta } from '@/components/document-meta';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
 import { visibilityLabels } from '@/lib/document';
+import { createRelativeLinkComponent } from '@/lib/relative-links';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
@@ -103,7 +105,11 @@ export default function ShowDocument({
     // siblings (already permission-filtered server-side via
     // namespaceDocuments). An unresolved title links to that namespace's
     // create form instead — a "red link" the reader can follow to write
-    // the missing page, the same convention as e.g. Wikipedia.
+    // the missing page, the same convention as e.g. Wikipedia. A signed-
+    // out reader can't create anything there (the route requires auth),
+    // so they'd just hit a login wall instead of a 404 — send them to the
+    // document URL directly instead, which 404s like any other missing
+    // page.
     const resolveWikilink: ResolveWikilink | undefined = useMemo(() => {
         if (!namespace) {
             return undefined;
@@ -117,7 +123,12 @@ export default function ShowDocument({
             const target = byTitle.get(path);
 
             if (!target) {
-                return { url: create(namespace.slug).url, exists: false };
+                return {
+                    url: auth.user
+                        ? create(namespace.slug).url
+                        : showByPath({ namespace: namespace.slug, path }).url,
+                    exists: false,
+                };
             }
 
             return {
@@ -130,9 +141,69 @@ export default function ShowDocument({
                 exists: true,
             };
         };
-    }, [namespace, namespaceDocuments]);
+    }, [namespace, namespaceDocuments, auth.user]);
 
     const ogpEndpoint = fetchOgp().url;
+
+    // Translated markdown is copied from the external site, so root-
+    // relative links like "/concepts/system-one" only ever resolved
+    // against that site — left alone they'd 404 against this app's own
+    // origin. Point them at the sibling document with the same path in
+    // this namespace instead, checking namespaceDocuments (already
+    // permission-filtered server-side) so an untranslated target renders
+    // as a red link (ink-wikilink-broken) rather than looking like a
+    // normal, working link that happens to 404 — the same convention as
+    // resolveWikilink above, just keyed by path instead of title. A
+    // signed-in reader following a red link lands on the create form (a
+    // reader can translate the missing page); a guest can't create
+    // anything there, so they get the plain document URL, which 404s
+    // instead of bouncing them to a login wall.
+    const translationLinkComponents = useMemo<Components | undefined>(() => {
+        if (!namespace) {
+            return undefined;
+        }
+
+        const paths = new Set(
+            namespaceDocuments
+                .map((item) => item.path)
+                .filter((path) => path !== null),
+        );
+
+        return {
+            a: createRelativeLinkComponent((path) => {
+                if (paths.has(path)) {
+                    return {
+                        url: showByPath({ namespace: namespace.slug, path })
+                            .url,
+                        exists: true,
+                    };
+                }
+
+                return {
+                    url: auth.user
+                        ? create(namespace.slug).url
+                        : showByPath({ namespace: namespace.slug, path }).url,
+                    exists: false,
+                };
+            }),
+        };
+    }, [namespace, namespaceDocuments, auth.user]);
+
+    // The source pane renders the untranslated original, so its root-
+    // relative links should resolve exactly as they did on the site it
+    // was fetched from — against that site's own origin, not this
+    // namespace's paths.
+    const sourceLinkComponents = useMemo<Components | undefined>(() => {
+        if (!document.source_url) {
+            return undefined;
+        }
+
+        const sourceOrigin = new URL(document.source_url).origin;
+
+        return {
+            a: createRelativeLinkComponent((path) => `${sourceOrigin}/${path}`),
+        };
+    }, [document.source_url]);
 
     // Owners get the full "ドキュメント > namespace > title" trail. Everyone
     // else (other logged-in users and guests, i.e. "public mode") only ever
@@ -345,6 +416,9 @@ export default function ShowDocument({
                                                     resolveWikilink={
                                                         resolveWikilink
                                                     }
+                                                    components={
+                                                        translationLinkComponents
+                                                    }
                                                 >
                                                     {document.content}
                                                 </InkstreamMarkdown>
@@ -364,10 +438,11 @@ export default function ShowDocument({
                                             >
                                                 <InkstreamMarkdown
                                                     ogpEndpoint={ogpEndpoint}
-                                                >
-                                                    {
-                                                        document.source_content
+                                                    components={
+                                                        sourceLinkComponents
                                                     }
+                                                >
+                                                    {document.source_content}
                                                 </InkstreamMarkdown>
                                             </div>
                                         </div>
@@ -376,6 +451,7 @@ export default function ShowDocument({
                                     <InkstreamMarkdown
                                         ogpEndpoint={ogpEndpoint}
                                         resolveWikilink={resolveWikilink}
+                                        components={translationLinkComponents}
                                     >
                                         {document.content}
                                     </InkstreamMarkdown>
