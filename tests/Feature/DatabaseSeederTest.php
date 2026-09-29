@@ -113,7 +113,7 @@ test('primitivesの翻訳済み本文がシードされ、平坦化したコー�
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 
-test('primitives/choiceは平坦化した原本を取り込んだだけで未翻訳のままシードされる', function () {
+test('primitives/choiceの翻訳済み本文がシードされ、コードブロックは原文のまま残る', function () {
     $this->seed();
 
     $document = Document::query()->where('path', 'primitives/choice')->sole();
@@ -121,8 +121,10 @@ test('primitives/choiceは平坦化した原本を取り込んだだけで未翻
     expect($document->source_url)->toBe('https://docs.typesafe.ai/primitives/choice.md')
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/primitives/choice')
         ->and($document->source_content)->not->toContain('TypesafeExample')
-        ->and(substr_count($document->source_content, '```json title="request" theme={null}'))->toBe(3)
-        ->and($document->content)->toBe($document->source_content)
+        ->and($document->content)->toStartWith('# Choice')
+        ->and($document->content)->toContain('確信度')
+        ->and(substr_count($document->content, '```json title="request" theme={null}'))->toBe(3)
+        ->and($document->content)->toContain('"choice": "returns"')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 

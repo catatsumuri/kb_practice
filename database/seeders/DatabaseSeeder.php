@@ -147,18 +147,14 @@ class DatabaseSeeder extends Seeder
             content: File::get(database_path('seeders/typesafe-primitives-translation.md')),
         );
 
-        // Imported from the source site but not translated yet, so the
-        // content is still the original text.
-        $choiceSource = File::get(database_path('seeders/typesafe-choice-source.md'));
-
         $this->createTranslation(
             $users[0],
             $typesafeNamespace,
             path: 'primitives/choice',
             sourceTitle: 'Choice',
             title: 'Choice',
-            sourceContent: $choiceSource,
-            content: $choiceSource,
+            sourceContent: File::get(database_path('seeders/typesafe-choice-source.md')),
+            content: File::get(database_path('seeders/typesafe-choice-translation.md')),
         );
     }
 
