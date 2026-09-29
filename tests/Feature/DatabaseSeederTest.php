@@ -92,7 +92,8 @@ test('stateの翻訳済み本文がシードされ、コードブロックは原
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/state')
         ->and($document->source_content)->toStartWith('> ## Documentation Index')
         ->and($document->content)->toStartWith('# 状態')
-        ->and($document->content)->toContain('"refund_policy": "Duplicate charges are eligible for a refund."')
+        ->and($document->content)->toContain('"refund_policy": "二重請求は返金の対象となります。"')
+        ->and($document->content)->toContain('{"from": "customer", "text": "注文A-104で2回請求されました。')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 
@@ -123,8 +124,9 @@ test('primitives/choiceの翻訳済み本文がシードされ、コードブロ
         ->and($document->source_content)->not->toContain('TypesafeExample')
         ->and($document->content)->toStartWith('# Choice')
         ->and($document->content)->toContain('確信度')
-        ->and(substr_count($document->content, '```json title="request" theme={null}'))->toBe(3)
+        ->and(substr_count($document->content, '```json title='))->toBe(3)
         ->and($document->content)->toContain('"choice": "returns"')
+        ->and($document->content)->toContain('"returns": "交換、誤った商品または破損した商品"')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 

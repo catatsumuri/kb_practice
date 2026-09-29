@@ -1,34 +1,34 @@
 # クイックスタート {#quick-start}
 
-> すぐに始めたいですか？今すぐ開始するために必要なすべてがここにあります。
+> すぐに試してみたい方へ。今すぐ始めるために必要なすべてをまとめました。
 
 ## 試してみる：Playground {#try-it-the-playground}
 
-1. **[Playground](https://console.typesafe.ai/playground) を開き**、ログインします。
-2. **任意のテキストを貼り付け**、状態として設定します。
+1. **[Playground](https://console.typesafe.ai/playground)を開いて**ログインします。
+2. **任意のテキストを貼り付けて**状態として入力します。
 
-```plaintext title="Sample state" theme={null}
-Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.
+```plaintext title="サンプルの状態" theme={null}
+Stripeアカウントを3日間接続しようとしていますが、インテグレーションが失敗し続けています。売上が失われています。至急助けてください。
 ```
 
-3. **質問を追加します。** Noul 質問を試してみましょう：`"Does this message express urgency?"`
+3. **質問を追加します。** Noulの質問を試してみましょう：`"Does this message express urgency?"`
 
 ```json theme={null}
 {
   "urgency": {
     "type": "noul",
-    "instructions": "Does this message express urgency?"
+    "instructions": "このメッセージは緊急性を表していますか？"
   }
 }
 ```
 
-4. **さらに質問を追加します。** Noul、Choice、Score を1回の呼び出しで組み合わせて、すべての結果を一度に確認できます。
+4. **質問をさらに追加します。** Noul、Choice、Scoreを1回の呼び出しで組み合わせて、すべての結果を一度に確認しましょう。
 
 ## 呼び出す：API {#call-it-the-api}
 
-1. **APIキーを取得**します（[ダッシュボード](https://console.typesafe.ai/keys)から）。
-2. **API エンドポイントに POST リクエストを送信**します。
-3. **[API リファレンス](/api)** で詳細を確認します。
+1. **APIキーを取得**します（[ダッシュボード](https://console.typesafe.ai/keys)から）
+2. **POSTリクエストを送信**します（APIエンドポイントへ）
+3. **[APIリファレンス](/api)を確認**して詳細を確認します。
 
 ```http theme={null}
 POST https://api.typesafe.ai/v1/systemone
@@ -36,7 +36,7 @@ Authorization: Bearer <API_KEY>
 Content-Type: application/json
 ```
 
-### cURL コマンドの例 {#sample-curl-command}
+### サンプルcURLコマンド {#sample-curl-command}
 
 ```bash theme={null}
 curl -X POST https://api.typesafe.ai/v1/systemone \
@@ -44,12 +44,12 @@ curl -X POST https://api.typesafe.ai/v1/systemone \
   -H "Content-Type: application/json" \
   -d @- <<'EOF'
   {
-    "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
+    "state": "Stripeアカウントを3日間接続しようとしていますが、インテグレーションが失敗し続けています。売上が失われています。至急助けてください。",
     "model": "jev-latest",
     "questions": {
       "urgency": {
         "type": "noul",
-        "instructions": "Does this message express urgency?"
+        "instructions": "このメッセージは緊急性を表していますか？"
       }
     }
   }
@@ -60,30 +60,30 @@ EOF
 
 ```json theme={null}
 {
-  "state": "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP.",
+  "state": "Stripeアカウントを3日間接続しようとしていますが、インテグレーションが失敗し続けています。売上が失われています。至急助けてください。",
   "model": "jev-latest",
   "questions": {
     "department": {
       "type": "choice",
-      "instructions": "Which team should handle this",
+      "instructions": "このリクエストを担当すべきチームはどこか",
       "criteria": {
-        "billing": "Payment or subscription issues",
-        "technical": "Bugs or integration problems",
-        "sales": "Pricing or account questions"
+        "billing": "支払いまたはサブスクリプションに関する問題",
+        "technical": "バグまたはインテグレーションの問題",
+        "sales": "料金またはアカウントに関する質問"
       }
     },
     "frustration": {
       "type": "score",
-      "instructions": "How frustrated the customer appears",
+      "instructions": "顧客がどの程度不満を感じているか",
       "criteria": [
-        "Calm, just stating facts",
-        "Frustrated but civil",
-        "Very angry, strong language"
+        "冷静で、事実を述べているだけ",
+        "不満はあるが礼儀正しい",
+        "非常に怒っており、強い言葉を使っている"
       ]
     },
     "is_urgent": {
       "type": "noul",
-      "instructions": "The message conveys urgency or time-sensitivity"
+      "instructions": "メッセージが緊急性または時間的な切迫感を伝えている"
     }
   }
 }
@@ -110,9 +110,9 @@ EOF
       "score": 1.0,
       "confidence": 1.0,
       "legend": {
-        "0": "Calm, just stating facts",
-        "1": "Frustrated but civil",
-        "2": "Very angry, strong language"
+        "0": "冷静で、事実を述べているだけ",
+        "1": "不満はあるが礼儀正しい",
+        "2": "非常に怒っており、強い言葉を使っている"
       },
       "probabilities": {
         "0": 0.0,
@@ -132,50 +132,50 @@ EOF
 }
 ```
 
-詳細については [API リファレンス](/api) を参照してください。
+詳細については[APIリファレンス](/api)を参照してください。
 
 ## コードで使う：Python SDK {#code-it-the-python-sdk}
 
-1. **SDK をインストール**します（Python >= 3.10 が必要です）。
+1. **SDKをインストールします**（Python >= 3.10が必要です）。
 
-```bash title="With pip" theme={null}
+```bash title="pipを使う場合" theme={null}
 pip install typesafe-sdk
 ```
 
-```bash title="With uv" theme={null}
+```bash title="uvを使う場合" theme={null}
 uv add typesafe-sdk
 ```
 
-2. **SDK を使用します。** クライアントは環境変数から `TYPESAFE_API_KEY` を読み取り、デフォルトで `jev-latest` を呼び出します。
+2. **SDKを使用します。** クライアントは環境変数から`TYPESAFE_API_KEY`を読み取り、デフォルトで`jev-latest`を呼び出します。
 
 ```python theme={null}
 from typesafe_sdk import Choice, Noul, Score, TypeSafeClient
 
 client = TypeSafeClient()
 
-ticket = "Hi, I've been trying to connect my Stripe account for 3 days and the integration keeps failing. I'm losing sales. Please help ASAP."
+ticket = "Stripeアカウントを3日間接続しようとしていますが、インテグレーションが失敗し続けています。売上が失われています。至急助けてください。"
 
 response = client.system_one(
     state=ticket,
     questions={
         "department": Choice(
-            instructions="Which team should handle this",
+            instructions="このリクエストを担当すべきチームはどこか",
             criteria={
-                "billing": "Payment or subscription issues",
-                "technical": "Bugs or integration problems",
-                "sales": "Pricing or account questions",
+                "billing": "支払いまたはサブスクリプションに関する問題",
+                "technical": "バグまたはインテグレーションの問題",
+                "sales": "料金またはアカウントに関する質問",
             },
         ),
         "frustration": Score(
-            instructions="How frustrated the customer appears",
+            instructions="顧客がどの程度不満を感じているか",
             criteria=[
-                "Calm, just stating facts",
-                "Frustrated but civil",
-                "Very angry, strong language",
+                "冷静で、事実を述べているだけ",
+                "不満はあるが礼儀正しい",
+                "非常に怒っており、強い言葉を使っている",
             ],
         ),
         "is_urgent": Noul(
-            instructions="The message conveys urgency or time-sensitivity",
+            instructions="メッセージが緊急性または時間的な切迫感を伝えている",
         ),
     },
 )
@@ -185,15 +185,15 @@ print(response.answers["frustration"].score)  # 1.0
 print(response.answers["is_urgent"].noul)     # 1.0
 ```
 
-インストール方法と詳細な使い方については [クライアント SDK](/sdk) を参照してください。
+インストール方法と詳細な使い方については[クライアントSDK](/sdk)を参照してください。
 
-## エージェントで使う：エージェントスキル {#vibe-it-the-agent-skill}
+## バイブコーディング：エージェントスキル {#vibe-it-the-agent-skill}
 
-1. **[TypeSafe スキルをインストール](/agent-skill#installation)** します。Claude Code プラグイン、または `npx skills add typesafe-ai/skills --skill typesafe-ai` を使用します。[GitHub で SKILL.md を読む](https://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md) こともできます。
+1. **[TypeSafeスキルをインストール](/agent-skill#installation)** します。Claude Codeプラグインか`npx skills add typesafe-ai/skills --skill typesafe-ai`を使用します。[GitHubでSKILL.mdを読む](https://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md)こともできます。
 
 <Tabs>
   <Tab title="Claude Code">
-    ターミナルで以下の2つのコマンドを実行します：
+    ターミナルで次の2つのコマンドを実行します：
 
     ```bash theme={null}
     claude plugin marketplace add typesafe-ai/skills
@@ -201,27 +201,27 @@ print(response.answers["is_urgent"].noul)     # 1.0
     ```
   </Tab>
 
-  <Tab title="Other agents">
+  <Tab title="その他のエージェント">
     ```bash theme={null}
     npx skills add typesafe-ai/skills --skill typesafe-ai
     ```
 
-    プロンプトが表示されたらエージェントを選択します。インストールはデフォルトでプロジェクトローカルです。グローバルにインストールするには `-g` を追加してください。
+    プロンプトが表示されたらエージェントを選択します。インストールはデフォルトでプロジェクトローカルです。グローバルにインストールするには`-g`を追加します。
   </Tab>
 
-  <Tab title="Copy to your agent">
-    コーディングエージェントに以下のプロンプトを貼り付けます：
+  <Tab title="エージェントにコピーする">
+    コーディングエージェントにこのプロンプトを貼り付けます：
 
     ```text wrap theme={null}
-    Install the TypeSafe skill. If you're in Claude Code, run `claude plugin marketplace add typesafe-ai/skills`, then `claude plugin install typesafe@typesafe-ai`. If you're in another agent, run `npx skills add typesafe-ai/skills --skill typesafe-ai` and select your agent. Use one installation method. You can read the skill directly at https://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md (raw: https://raw.githubusercontent.com/typesafe-ai/skills/main/skills/typesafe-ai/SKILL.md). Then use the TypeSafe skill when working on this project.
+    TypeSafeスキルをインストールしてください。Claude Codeを使用している場合は`claude plugin marketplace add typesafe-ai/skills`を実行し、次に`claude plugin install typesafe@typesafe-ai`を実行します。別のエージェントを使用している場合は`npx skills add typesafe-ai/skills --skill typesafe-ai`を実行してエージェントを選択します。インストール方法は1つだけ使用してください。スキルはhttps://github.com/typesafe-ai/skills/blob/main/skills/typesafe-ai/SKILL.md（raw: https://raw.githubusercontent.com/typesafe-ai/skills/main/skills/typesafe-ai/SKILL.md）で直接読むことができます。その後、このプロジェクトの作業にTypeSafeスキルを使用してください。
     ```
   </Tab>
 </Tabs>
 
-2. **コーディングエージェントに指示**して、TypeSafe スキルをビルドに活用しましょう！
+2. **コーディングエージェントに**ビルド中にTypeSafeスキルを使うよう指示します！
 
-```plaintext title="Coding agent prompt" theme={null}
-Let's build a simple CLI that uses the TypeSafe API to evaluate a set of supplied documents on multiple dimensions. Use the TypeSafe skill to understand how to use the TypeSafe API and how to structure the system. Ask me questions about what kinds of documents I want to evaluate and on what dimensions.
+```plaintext title="コーディングエージェントへのプロンプト" theme={null}
+TypeSafe APIを使って、指定されたドキュメント群を複数の観点で評価するシンプルなCLIを作りましょう。TypeSafeスキルを使ってTypeSafe APIの使い方とシステムの構成方法を理解してください。どのようなドキュメントをどのような観点で評価したいかについて、私に質問してください。
 ```
 
-詳細については [エージェントスキル](/agent-skill) ページを参照してください。
+詳細については[エージェントスキル](/agent-skill)ページを参照してください。

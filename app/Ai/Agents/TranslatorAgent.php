@@ -32,6 +32,17 @@ class TranslatorAgent implements Agent
             lists, links, tables, and code blocks. Do not translate code,
             URLs, or proper nouns that should stay untranslated.
 
+            The one exception is example content inside code blocks: in
+            JSON, Python, curl and other samples alike, translate the
+            natural-language string values (a state text, instructions,
+            criteria descriptions, other example prose) and code comments,
+            so that the same example reads the same everywhere. Never
+            translate keys, identifiers, option names used as keys (billing,
+            wrong_size, ...), fixed values such as "type": "choice", URLs or
+            model names. A response that repeats text from its request (such
+            as a score legend) must use exactly the translation the request
+            got.
+
             When translating into Japanese, do not put spaces between
             Japanese and Latin text, and use these terms consistently:
             confidence = 確信度,

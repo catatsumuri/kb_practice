@@ -48,6 +48,17 @@ test('its instructions keep JSX tag attributes other than title untouched', func
         ->toContain('(icon, cols, href, ...)');
 });
 
+test('its instructions translate example prose in code blocks but not keys or identifiers', function () {
+    $instructions = (string) (new TranslatorAgent)->instructions();
+
+    expect($instructions)
+        ->toContain('translate the')
+        ->toContain('natural-language string values')
+        ->toContain('Never')
+        ->toContain('translate keys, identifiers')
+        ->toContain('exactly the translation the request');
+});
+
 test('it allows long articles more than the default 60 second request timeout', function () {
     $attributes = (new ReflectionClass(TranslatorAgent::class))->getAttributes(Timeout::class);
 
