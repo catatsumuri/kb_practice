@@ -14,7 +14,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(5);
+        ->and(Document::query()->count())->toBe(6);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -78,5 +78,19 @@ test('system-oneの翻訳済み本文がシードされる', function () {
         ->and($document->content)->toStartWith('# System One')
         ->and($document->content)->toContain('フラッグシップモデル')
         ->and(substr_count($document->content, '<Note>'))->toBe(2)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('stateの翻訳済み本文がシードされ、コードブロックは原文のまま残る', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'concepts/state')->sole();
+
+    expect($document->title)->toBe('状態')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/concepts/state.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/state')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# 状態')
+        ->and($document->content)->toContain('"refund_policy": "Duplicate charges are eligible for a refund."')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

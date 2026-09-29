@@ -121,6 +121,16 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-system-one-source.md')),
             content: File::get(database_path('seeders/typesafe-system-one-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'concepts/state',
+            sourceTitle: 'State',
+            title: '状態',
+            sourceContent: File::get(database_path('seeders/typesafe-state-source.md')),
+            content: File::get(database_path('seeders/typesafe-state-translation.md')),
+        );
     }
 
     /**
