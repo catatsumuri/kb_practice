@@ -206,6 +206,16 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-how-to-build-with-system-one-source.md')),
             content: File::get(database_path('seeders/typesafe-how-to-build-with-system-one-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'introduction/machine-learning-primer',
+            sourceTitle: 'AI primer',
+            title: 'AIプライマー',
+            sourceContent: File::get(database_path('seeders/typesafe-machine-learning-primer-source.md')),
+            content: File::get(database_path('seeders/typesafe-machine-learning-primer-translation.md')),
+        );
     }
 
     /**

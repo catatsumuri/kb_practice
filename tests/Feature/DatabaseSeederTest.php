@@ -15,7 +15,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(13);
+        ->and(Document::query()->count())->toBe(14);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -228,5 +228,20 @@ test('how-to-buildの翻訳済み本文がシードされ、画像URLと入れ�
         ->and(substr_count($document->content, '</Step>'))->toBe(8)
         ->and(substr_count($document->content, '<Accordion '))->toBe(9)
         ->and(substr_count($document->content, '```json title='))->toBe(8)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('machine-learning-primerの翻訳済み本文がシードされ、画像URLは原文のまま残る', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'introduction/machine-learning-primer')->sole();
+
+    expect($document->title)->toBe('AIプライマー')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/introduction/machine-learning-primer.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/introduction/machine-learning-primer')
+        ->and($document->content)->toStartWith('# AIプライマー')
+        ->and($document->content)->not->toContain('<img')
+        ->and(substr_count($document->content, '#only-light)'))->toBe(3)
+        ->and(substr_count($document->content, '#only-dark)'))->toBe(3)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
