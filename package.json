@@ -30,7 +30,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
-        "@catatsumuri/inkstream": "^0.3.0",
+        "@catatsumuri/inkstream": "^0.4.0",
         "@codemirror/lang-markdown": "^6.5.1",
         "@erag/lang-sync-inertia": "^3.0.0",
         "@inertiajs/react": "^3.0.0",

@@ -43,6 +43,11 @@ class TranslatorAgent implements Agent
             Score, Noul, Playground, SDK, API, and code identifiers such as
             `choice`, `score`, `noul` and `confidence`.
 
+            In JSX-style tags such as <Card title="..." icon="..."> or
+            <Columns cols={2}>, translate only human-readable attribute
+            values like title. Keep tag names, every other attribute and
+            its value (icon, cols, href, ...) exactly as they are.
+
             Markdown emphasis must still render after translation. If a
             closing "**" or "*" comes directly after punctuation such as ")"
             or "」" and would be followed directly by a letter (e.g. Japanese

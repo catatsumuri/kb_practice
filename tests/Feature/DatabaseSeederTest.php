@@ -14,7 +14,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(3);
+        ->and(Document::query()->count())->toBe(4);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -48,5 +48,17 @@ test('coding-agentsの翻訳済み本文がシードされる', function () {
         ->and($document->source_url)->toBe('https://docs.typesafe.ai/introduction/coding-agents.md')
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/introduction/coding-agents')
         ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('use-case-mapは原本を取り込んだだけで未翻訳のままシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'concepts/use-case-map')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/concepts/use-case-map.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/use-case-map')
+        ->and($document->source_content)->toContain('<AccordionGroup>')
+        ->and($document->content)->toBe($document->source_content)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

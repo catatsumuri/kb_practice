@@ -37,3 +37,11 @@ test('its instructions carry the Japanese glossary and spacing rule', function (
         ->toContain('Playground')
         ->toContain('do not put spaces between');
 });
+
+test('its instructions keep JSX tag attributes other than title untouched', function () {
+    $instructions = (string) (new TranslatorAgent)->instructions();
+
+    expect($instructions)
+        ->toContain('translate only human-readable attribute')
+        ->toContain('(icon, cols, href, ...)');
+});
