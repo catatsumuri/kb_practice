@@ -92,6 +92,28 @@ test('記事作成時にスラッグを指定するとそのパスで表示で�
         ->assertInertia(fn (Assert $page) => $page->where('document.id', $document->id));
 });
 
+test('記事作成時に複数階層のスラッグを指定するとそのパスで表示できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => 'System One モデル',
+            'content' => '本文',
+            'visibility' => DocumentVisibility::Public->value,
+            'path' => 'concepts/system-one',
+        ])
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    $document = Document::query()->sole();
+
+    expect($document->path)->toBe('concepts/system-one');
+
+    $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'concepts/system-one']))
+        ->assertSuccessful()
+        ->assertInertia(fn (Assert $page) => $page->where('document.id', $document->id));
+});
+
 test('記事作成時のスラッグは省略できる', function () {
     $user = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
@@ -161,6 +183,10 @@ test('記事のスラッグの形式が不正な場合は作成できない', fu
     'スペースを含む' => 'has spaces',
     '大文字を含む' => 'UPPERCASE',
     '先頭がハイフン' => '-leading-hyphen',
+    '先頭がスラッシュ' => '/leading-slash',
+    '末尾がスラッシュ' => 'trailing-slash/',
+    'スラッシュが連続' => 'double//slash',
+    '階層内の大文字' => 'concepts/System-One',
 ]);
 
 test('他のユーザーのネームスペースには記事を作成できない', function () {

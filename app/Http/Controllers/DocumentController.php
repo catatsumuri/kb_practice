@@ -82,7 +82,13 @@ class DocumentController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                'regex:/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/',
+                // One or more slug segments joined by "/", e.g.
+                // "concepts/system-one" — showByPath's route already
+                // accepts a multi-segment {path} (see routes/web.php), so
+                // a document can mirror a nested page from the site it
+                // was translated from instead of being flattened into a
+                // single segment.
+                'regex:/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*(?:\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*)*$/',
                 Rule::notIn(config('document-namespaces.reserved_paths')),
                 Rule::unique('documents', 'path')->where('document_namespace_id', $namespace->id),
             ],
@@ -92,7 +98,7 @@ class DocumentController extends Controller
             'source_author' => ['nullable', 'string', 'max:255'],
             'source_content' => ['nullable', 'string'],
         ], [
-            'path.regex' => 'スラッグは半角英数字とハイフンのみ使用できます。',
+            'path.regex' => 'スラッグは半角英数字とハイフンのみ使用できます（/ で区切って複数階層にできます）。',
             'path.not_in' => 'このスラッグは予約されているため使用できません。',
             'path.unique' => 'このスラッグは既に使用されています。',
         ]);

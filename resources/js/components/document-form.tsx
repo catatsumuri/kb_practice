@@ -381,7 +381,8 @@ export function DocumentForm({
                                         />
                                     </div>
                                     <p className="text-xs text-muted-foreground">
-                                        半角英数字とハイフンのみ使用できます。空欄の場合は数値IDのURLになります。公開URL:
+                                        半角英数字とハイフンのみ使用できます（/
+                                        で区切って複数階層にできます）。空欄の場合は数値IDのURLになります。公開URL:
                                         /{namespaceSlug}/{path || 'スラッグ'}
                                     </p>
                                     <InputError message={errors.path} />
