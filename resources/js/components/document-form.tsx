@@ -48,6 +48,7 @@ type DocumentFormValues = {
     visibility: DocumentVisibility;
     path?: string | null;
     source_url?: string | null;
+    canonical_url?: string | null;
     source_title?: string | null;
     source_author?: string | null;
     source_content?: string | null;
@@ -67,7 +68,7 @@ type DocumentFormProps = {
     form: RouteFormDefinition<'post'>;
     cancelHref: LinkHref;
     submitLabel: string;
-    defaultValues?: DocumentFormValues;
+    defaultValues?: Partial<DocumentFormValues>;
     defaultVisibility?: DocumentVisibility;
     allowSourceFetch?: boolean;
     fetchedSource?: FetchedSource | null;
@@ -267,6 +268,31 @@ export function DocumentForm({
                                             message={
                                                 fetchError ?? errors.source_url
                                             }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="canonical_url">
+                                            原文の正規URL（任意）
+                                        </Label>
+                                        <Input
+                                            id="canonical_url"
+                                            name="canonical_url"
+                                            type="url"
+                                            defaultValue={
+                                                defaultValues?.canonical_url ??
+                                                undefined
+                                            }
+                                            placeholder="https://example.com/article"
+                                            aria-invalid={Boolean(
+                                                errors.canonical_url,
+                                            )}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            翻訳元URLが取得専用（.md拡張子など）の場合、読者が実際に開くべきページのURLをここに指定します。
+                                        </p>
+                                        <InputError
+                                            message={errors.canonical_url}
                                         />
                                     </div>
 

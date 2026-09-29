@@ -51,15 +51,18 @@ class DocumentController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Show the form for creating a new resource. A `?path=` query
+     * parameter pre-fills the slug field — followed from a red link for a
+     * path that doesn't have a document yet.
      */
-    public function create(DocumentNamespace $namespace): Response
+    public function create(Request $request, DocumentNamespace $namespace): Response
     {
         Gate::authorize('create', Document::class);
         Gate::authorize('view', $namespace);
 
         return Inertia::render('documents/create', [
             'namespace' => $namespace,
+            'path' => $request->query('path'),
         ]);
     }
 
@@ -84,6 +87,7 @@ class DocumentController extends Controller
                 Rule::unique('documents', 'path')->where('document_namespace_id', $namespace->id),
             ],
             'source_url' => ['nullable', 'url:http,https', 'max:2048'],
+            'canonical_url' => ['nullable', 'url:http,https', 'max:2048'],
             'source_title' => ['nullable', 'string', 'max:255'],
             'source_author' => ['nullable', 'string', 'max:255'],
             'source_content' => ['nullable', 'string'],

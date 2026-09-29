@@ -12,11 +12,13 @@ import type { DocumentNamespace } from '@/types';
 
 type CreateDocumentProps = {
     namespace: Pick<DocumentNamespace, 'id' | 'slug' | 'name' | 'is_public'>;
+    path: string | null;
     fetchedSource?: FetchedSource | null;
 };
 
 export default function CreateDocument({
     namespace,
+    path,
     fetchedSource,
 }: CreateDocumentProps) {
     setLayoutProps({
@@ -41,6 +43,7 @@ export default function CreateDocument({
                     allowSourceFetch
                     fetchedSource={fetchedSource}
                     namespaceSlug={namespace.slug}
+                    defaultValues={path ? { path } : undefined}
                     defaultVisibility={
                         namespace.is_public ? 'public' : 'private'
                     }

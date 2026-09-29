@@ -52,6 +52,7 @@ class DatabaseSeeder extends Seeder
             'document_type' => DocumentType::Translation,
             'source_title' => 'Introduction',
             'source_url' => 'https://docs.typesafe.ai/introduction.md',
+            'canonical_url' => 'https://docs.typesafe.ai/introduction',
             'source_author' => 'TypeSafe',
             'source_content' => $sourceContent,
         ]);

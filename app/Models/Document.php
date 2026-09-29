@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'source_author', 'source_content', 'document_namespace_id', 'path', 'document_source_snapshot_id'])]
+#[Fillable(['title', 'content', 'visibility', 'document_type', 'source_title', 'source_url', 'canonical_url', 'source_author', 'source_content', 'document_namespace_id', 'path', 'document_source_snapshot_id'])]
 class Document extends Model
 {
     /** @use HasFactory<DocumentFactory> */

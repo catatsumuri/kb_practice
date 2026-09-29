@@ -181,7 +181,7 @@ export default function ShowDocument({
 
                 return {
                     url: auth.user
-                        ? create(namespace.slug).url
+                        ? create(namespace.slug, { query: { path } }).url
                         : showByPath({ namespace: namespace.slug, path }).url,
                     exists: false,
                 };
@@ -488,6 +488,7 @@ export default function ShowDocument({
                                                     {__('Translated from:')}{' '}
                                                     <a
                                                         href={
+                                                            document.canonical_url ??
                                                             document.source_url
                                                         }
                                                         target="_blank"
