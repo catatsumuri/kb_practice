@@ -51,14 +51,18 @@ test('coding-agentsの翻訳済み本文がシードされる', function () {
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });
 
-test('use-case-mapは原本を取り込んだだけで未翻訳のままシードされる', function () {
+test('use-case-mapの翻訳済み本文がシードされ、JSX属性は原文のまま残る', function () {
     $this->seed();
 
     $document = Document::query()->where('path', 'concepts/use-case-map')->sole();
 
-    expect($document->source_url)->toBe('https://docs.typesafe.ai/concepts/use-case-map.md')
+    expect($document->title)->toBe('ユースケース例')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/concepts/use-case-map.md')
         ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/use-case-map')
         ->and($document->source_content)->toContain('<AccordionGroup>')
-        ->and($document->content)->toBe($document->source_content)
+        ->and($document->content)->toStartWith('# ユースケース例')
+        ->and($document->content)->toContain('<Columns cols={2}>')
+        ->and($document->content)->toContain('<Card title="AI自動化ソフトウェア" icon="blocks">')
+        ->and(substr_count($document->content, '<Accordion '))->toBe(19)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

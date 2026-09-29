@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\TranslatorAgent;
+use Laravel\Ai\Attributes\Timeout;
 
 test('it translates the given text into the configured app locale', function () {
     config(['app.locale' => 'ja']);
@@ -44,4 +45,11 @@ test('its instructions keep JSX tag attributes other than title untouched', func
     expect($instructions)
         ->toContain('translate only human-readable attribute')
         ->toContain('(icon, cols, href, ...)');
+});
+
+test('it allows long articles more than the default 60 second request timeout', function () {
+    $attributes = (new ReflectionClass(TranslatorAgent::class))->getAttributes(Timeout::class);
+
+    expect($attributes)->toHaveCount(1)
+        ->and($attributes[0]->newInstance()->value)->toBeGreaterThan(60);
 });

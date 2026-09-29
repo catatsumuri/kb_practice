@@ -102,18 +102,14 @@ class DatabaseSeeder extends Seeder
             content: File::get(database_path('seeders/typesafe-coding-agents-translation.md')),
         );
 
-        // Imported from the source site but not translated yet, so the
-        // content is still the original text.
-        $useCaseMapSource = File::get(database_path('seeders/typesafe-use-case-map-source.md'));
-
         $this->createTranslation(
             $users[0],
             $typesafeNamespace,
             path: 'concepts/use-case-map',
             sourceTitle: 'Example use cases',
-            title: 'Example use cases',
-            sourceContent: $useCaseMapSource,
-            content: $useCaseMapSource,
+            title: 'ユースケース例',
+            sourceContent: File::get(database_path('seeders/typesafe-use-case-map-source.md')),
+            content: File::get(database_path('seeders/typesafe-use-case-map-translation.md')),
         );
     }
 

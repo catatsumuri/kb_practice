@@ -3,12 +3,14 @@
 namespace App\Ai\Agents;
 
 use Laravel\Ai\Attributes\Provider;
+use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider(Lab::Bedrock)]
+#[Timeout(300)]
 class TranslatorAgent implements Agent
 {
     use Promptable;
