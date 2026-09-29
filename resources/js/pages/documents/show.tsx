@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
+import { markdownTabComponents } from '@/components/markdown-tabs';
 import { NamespaceNavigation } from '@/components/namespace-navigation';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
@@ -161,9 +162,9 @@ export default function ShowDocument({
     // reader can translate the missing page); a guest can't create
     // anything there, so they get the plain document URL, which 404s
     // instead of bouncing them to a login wall.
-    const translationLinkComponents = useMemo<Components | undefined>(() => {
+    const translationLinkComponents = useMemo<Components>(() => {
         if (!namespace) {
-            return undefined;
+            return markdownTabComponents;
         }
 
         const paths = new Set(
@@ -172,7 +173,7 @@ export default function ShowDocument({
                 .filter((path) => path !== null),
         );
 
-        return createRelativeLinkComponents((path) => {
+        const linkComponents = createRelativeLinkComponents((path) => {
             if (paths.has(path)) {
                 return {
                     url: showByPath({ namespace: namespace.slug, path }).url,
@@ -187,22 +188,27 @@ export default function ShowDocument({
                 exists: false,
             };
         });
+
+        return { ...markdownTabComponents, ...linkComponents };
     }, [namespace, namespaceDocuments, auth.user]);
 
     // The source pane renders the untranslated original, so its root-
     // relative links should resolve exactly as they did on the site it
     // was fetched from — against that site's own origin, not this
     // namespace's paths.
-    const sourceLinkComponents = useMemo<Components | undefined>(() => {
+    const sourceLinkComponents = useMemo<Components>(() => {
         if (!document.source_url) {
-            return undefined;
+            return markdownTabComponents;
         }
 
         const sourceOrigin = new URL(document.source_url).origin;
 
-        return createRelativeLinkComponents(
-            (path) => `${sourceOrigin}/${path}`,
-        );
+        return {
+            ...markdownTabComponents,
+            ...createRelativeLinkComponents(
+                (path) => `${sourceOrigin}/${path}`,
+            ),
+        };
     }, [document.source_url]);
 
     // Owners get the full "ドキュメント > namespace > title" trail. Everyone
