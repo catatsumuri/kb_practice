@@ -34,11 +34,11 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
+import { NamespaceNavigation } from '@/components/namespace-navigation';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
 import { documentHref, visibilityLabels } from '@/lib/document';
 import { createRelativeLinkComponents } from '@/lib/relative-links';
-import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 import type {
@@ -359,71 +359,11 @@ export default function ShowDocument({
                                         maxHeight: 'calc(100vh - 2rem)',
                                     }}
                                 >
-                                    <nav className="rounded-md border p-4 text-sm">
-                                        <Link
-                                            href={showNamespace(namespace.slug)}
-                                            className="mb-2 block font-semibold text-foreground hover:underline"
-                                        >
-                                            {namespace.name}
-                                        </Link>
-                                        {namespaceNavigation.map(
-                                            (group, index) => (
-                                                <div
-                                                    key={
-                                                        group.title ??
-                                                        `group-${index}`
-                                                    }
-                                                    className={cn(
-                                                        index > 0 && 'mt-4',
-                                                    )}
-                                                >
-                                                    {group.title && (
-                                                        <p className="mb-1 px-1 text-xs font-semibold tracking-wide text-foreground">
-                                                            {group.title}
-                                                        </p>
-                                                    )}
-                                                    <ul className="space-y-1">
-                                                        {group.documents.map(
-                                                            (item) => (
-                                                                <li
-                                                                    key={
-                                                                        item.id
-                                                                    }
-                                                                >
-                                                                    <Link
-                                                                        href={
-                                                                            item.path
-                                                                                ? showByPath(
-                                                                                      {
-                                                                                          namespace:
-                                                                                              namespace.slug,
-                                                                                          path: item.path,
-                                                                                      },
-                                                                                  )
-                                                                                : show(
-                                                                                      item.id,
-                                                                                  )
-                                                                        }
-                                                                        prefetch
-                                                                        className={cn(
-                                                                            'block rounded px-1 py-0.5 text-muted-foreground hover:text-foreground',
-                                                                            item.id ===
-                                                                                document.id &&
-                                                                                'font-medium text-foreground',
-                                                                        )}
-                                                                    >
-                                                                        {
-                                                                            item.title
-                                                                        }
-                                                                    </Link>
-                                                                </li>
-                                                            ),
-                                                        )}
-                                                    </ul>
-                                                </div>
-                                            ),
-                                        )}
-                                    </nav>
+                                    <NamespaceNavigation
+                                        namespace={namespace}
+                                        groups={namespaceNavigation}
+                                        currentDocumentId={document.id}
+                                    />
                                 </aside>
                             )}
 
