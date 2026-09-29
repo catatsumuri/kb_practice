@@ -14,7 +14,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(4);
+        ->and(Document::query()->count())->toBe(5);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -64,5 +64,19 @@ test('use-case-mapの翻訳済み本文がシードされ、JSX属性は原文�
         ->and($document->content)->toContain('<Columns cols={2}>')
         ->and($document->content)->toContain('<Card title="AI自動化ソフトウェア" icon="blocks">')
         ->and(substr_count($document->content, '<Accordion '))->toBe(19)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('system-oneの翻訳済み本文がシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'concepts/system-one')->sole();
+
+    expect($document->source_url)->toBe('https://docs.typesafe.ai/concepts/system-one.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/concepts/system-one')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# System One')
+        ->and($document->content)->toContain('フラッグシップモデル')
+        ->and(substr_count($document->content, '<Note>'))->toBe(2)
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
 });

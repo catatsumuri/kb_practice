@@ -35,6 +35,7 @@ test('its instructions carry the Japanese glossary and spacing rule', function (
 
     expect($instructions)
         ->toContain('confidence = 確信度')
+        ->toContain('flagship = フラッグシップ')
         ->toContain('Playground')
         ->toContain('do not put spaces between');
 });

@@ -39,6 +39,7 @@ class TranslatorAgent implements Agent
             probability = 確率, coding agent = コーディングエージェント,
             agent skill = エージェントスキル,
             calibrated = キャリブレーション済み,
+            flagship = フラッグシップ, AI primer = AIプライマー,
             System One model = System Oneモデル, Quick start = クイックスタート,
             Patterns = パターン, context rot = コンテキストロット.
             Keep these untranslated: Jev, TypeSafe, System One, Choice,
