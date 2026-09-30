@@ -317,6 +317,7 @@ class DatabaseSeeder extends Seeder
         );
 
         $this->call(TypesafeCookbooksSeeder::class);
+        $this->call(TypesafeReferenceSeeder::class);
     }
 
     /**

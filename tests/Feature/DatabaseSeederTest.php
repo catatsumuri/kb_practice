@@ -16,7 +16,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(40);
+        ->and(Document::query()->count())->toBe(111);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -441,7 +441,7 @@ test('CookbookとDemosのSeederを繰り返しても文書は重複しない', f
     $this->seed();
     $this->seed(TypesafeCookbooksSeeder::class);
 
-    expect(Document::query()->count())->toBe(40)
+    expect(Document::query()->count())->toBe(111)
         ->and(Document::query()->where('path', 'cookbooks/parallel_questions')->count())->toBe(1)
         ->and(Document::query()->where('path', 'demos/smart-home')->count())->toBe(1);
 });
