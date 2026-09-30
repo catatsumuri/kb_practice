@@ -52,7 +52,9 @@ export type DocumentPermissions = {
 
 export type DocumentNavItem = Pick<Document, 'id' | 'title' | 'path'>;
 
-export type DocumentNavGroup = {
+export type DocumentNavNode = {
     title: string | null;
-    documents: DocumentNavItem[];
+    document: DocumentNavItem | null;
+    label: string | null;
+    children: DocumentNavNode[];
 };

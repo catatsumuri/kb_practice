@@ -308,7 +308,7 @@ class DocumentController extends Controller
      * the namespace's owner sees all of their own documents, everyone else
      * only sees the namespace's public ones.
      *
-     * @return array{document: Document, namespaceDocuments: Collection<int, Document>, namespaceNavigation: list<array{title: ?string, documents: list<Document>}>}
+     * @return array{document: Document, namespaceDocuments: Collection<int, Document>, namespaceNavigation: list<array{title: ?string, document: ?Document, label: ?string, children: array}>}
      */
     private function forDisplay(Request $request, Document $document): array
     {
@@ -334,7 +334,7 @@ class DocumentController extends Controller
             'document' => $document,
             'namespaceDocuments' => $namespaceDocuments,
             'namespaceNavigation' => $document->namespace
-                ? $document->namespace->navigationGroups($namespaceDocuments)
+                ? $document->namespace->navigationTree($namespaceDocuments)
                 : [],
         ];
     }

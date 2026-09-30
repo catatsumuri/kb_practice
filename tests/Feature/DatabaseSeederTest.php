@@ -5,6 +5,7 @@ use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\User;
+use Database\Seeders\TypesafeCookbooksSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -15,7 +16,7 @@ test('2人のテストユーザーとTypeSafeドキュメントの翻訳サン�
     $users = User::query()->orderBy('id')->get();
 
     expect($users)->toHaveCount(2)
-        ->and(Document::query()->count())->toBe(19);
+        ->and(Document::query()->count())->toBe(40);
 
     $document = Document::query()->where('path', 'introduction')->sole();
 
@@ -344,4 +345,103 @@ test('patterns/intent-routingの翻訳済み本文がシードされ、コード
         ->and($document->content)->toContain('handle_with_llm(ticket_id, RETURNS_SPECIALIST)')
         ->and($document->content)->toContain('handle_with_llm(ticket_id, COMPLAINT_RESOLUTION)')
         ->and($document->adoptedSourceSnapshot)->not->toBeNull();
+});
+
+test('cookbooksの翻訳済み本文がシードされ、表と内部リンクが維持される', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'cookbooks')->sole();
+    $cookbooks = collect(DocumentNamespace::query()->where('slug', 'typesafe')->sole()->navigation)
+        ->firstWhere('page', 'cookbooks');
+
+    expect($document->title)->toBe('クックブック')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/cookbooks.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/cookbooks')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# クックブック')
+        ->and($document->content)->toContain('| クックブック | 内容 | レベル |')
+        ->and($document->content)->toContain('[自己一致性: noul](/cookbooks/consistency_noul_cookbook)')
+        ->and(substr_count($document->content, '<Tip>'))->toBe(1)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull()
+        ->and($cookbooks['title'])->toBe('クックブック')
+        ->and($cookbooks['page'])->toBe('cookbooks');
+});
+
+test('self-consistency noulsの翻訳済み本文が難易度付きでシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'cookbooks/consistency_noul_cookbook')->sole();
+    $cookbooks = collect(DocumentNamespace::query()->where('slug', 'typesafe')->sole()->navigation)
+        ->firstWhere('page', 'cookbooks');
+
+    expect($document->title)->toBe('自己一致性：nouls')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/cookbooks/consistency_noul_cookbook.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/cookbooks/consistency_noul_cookbook')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toStartWith('# 自己一致性：nouls')
+        ->and($document->content)->toContain('```python expandable theme={null}')
+        ->and(substr_count($document->content, '```python'))->toBe(9)
+        ->and(substr_count($document->content, '<a href='))->toBe(1)
+        ->and($document->adoptedSourceSnapshot)->not->toBeNull()
+        ->and($cookbooks['pages'][0]['title'])->toBe('自己一致性')
+        ->and($cookbooks['pages'][0]['pages'][0])->toBe([
+            'page' => 'cookbooks/consistency_noul_cookbook',
+            'label' => '初級',
+        ]);
+});
+
+test('self-consistency choicesの原文が難易度付きで翻訳待ち文書としてシードされる', function () {
+    $this->seed();
+
+    $document = Document::query()->where('path', 'cookbooks/consistency_choice_cookbook')->sole();
+    $cookbooks = collect(DocumentNamespace::query()->where('slug', 'typesafe')->sole()->navigation)
+        ->firstWhere('page', 'cookbooks');
+
+    expect($document->title)->toBe('Self-consistency: choices')
+        ->and($document->source_title)->toBe('Self-consistency: choices')
+        ->and($document->source_url)->toBe('https://docs.typesafe.ai/cookbooks/consistency_choice_cookbook.md')
+        ->and($document->canonical_url)->toBe('https://docs.typesafe.ai/cookbooks/consistency_choice_cookbook')
+        ->and($document->source_content)->toStartWith('> ## Documentation Index')
+        ->and($document->content)->toBe($document->source_content)
+        ->and($document->source_content)->toContain('# Self-consistency: choices {#self-consistency-choices}')
+        ->and($cookbooks['pages'][0]['pages'][1])->toBe([
+            'page' => 'cookbooks/consistency_choice_cookbook',
+            'label' => '初級',
+        ]);
+});
+
+test('cookbookの原文とDemosが翻訳待ち文書として登録され、難易度順にナビゲーションされる', function () {
+    $this->seed();
+
+    $parallelQuestions = Document::query()->where('path', 'cookbooks/parallel_questions')->sole();
+    $smartHome = Document::query()->where('path', 'demos/smart-home')->sole();
+    $navigation = collect(DocumentNamespace::query()->where('slug', 'typesafe')->sole()->navigation);
+    $cookbooks = $navigation->firstWhere('page', 'cookbooks');
+    $demos = $navigation->firstWhere('page', 'demos');
+
+    expect($parallelQuestions->title)->toBe('Parallel questions')
+        ->and($parallelQuestions->content)->toBe($parallelQuestions->source_content)
+        ->and($parallelQuestions->source_url)->toBe('https://docs.typesafe.ai/cookbooks/parallel_questions.md')
+        ->and($parallelQuestions->adoptedSourceSnapshot)->not->toBeNull()
+        ->and($smartHome->title)->toBe('Smart home assistant demo')
+        ->and($smartHome->content)->toBe($smartHome->source_content)
+        ->and($smartHome->canonical_url)->toBe('https://docs.typesafe.ai/demos/smart-home')
+        ->and($smartHome->adoptedSourceSnapshot)->not->toBeNull()
+        ->and(array_column($cookbooks['pages'], 'title'))->toBe([
+            '自己一致性',
+            'バッチ処理',
+            'How-to',
+            '抽出',
+            '分類',
+        ])
+        ->and($demos['pages'])->toBe(['demos/smart-home']);
+});
+
+test('CookbookとDemosのSeederを繰り返しても文書は重複しない', function () {
+    $this->seed();
+    $this->seed(TypesafeCookbooksSeeder::class);
+
+    expect(Document::query()->count())->toBe(40)
+        ->and(Document::query()->where('path', 'cookbooks/parallel_questions')->count())->toBe(1)
+        ->and(Document::query()->where('path', 'demos/smart-home')->count())->toBe(1);
 });

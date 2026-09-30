@@ -32,6 +32,10 @@ class TranslatorAgent implements Agent
             lists, links, tables, and code blocks. Do not translate code,
             URLs, or proper nouns that should stay untranslated.
 
+            An oversized link destination may be represented by a marker such
+            as `__PRESERVED_URL_0__`. Keep every such marker exactly unchanged
+            in its link destination; the original URL is restored after translation.
+
             The one exception is example content inside code blocks: in
             JSON, Python, curl and other samples alike, translate the
             natural-language string values (a state text, instructions,
@@ -56,8 +60,11 @@ class TranslatorAgent implements Agent
             System One model = System Oneモデル, Quick start = クイックスタート,
             Patterns = パターン, context rot = コンテキストロット.
             Keep these untranslated: Jev, TypeSafe, System One, Choice,
-            Score, Noul, Playground, SDK, API, and code identifiers such as
-            `choice`, `score`, `noul` and `confidence`.
+            Score, Noul, Playground, SDK, API, temperature, and code
+            identifiers such as `choice`, `score`, `noul` and `confidence`.
+            In Japanese prose, write forms such as "temperature 0",
+            "temperature設定" and "temperature引数" instead of translating
+            temperature as "温度".
 
             In JSX-style tags such as <Card title="..." icon="..."> or
             <Columns cols={2}>, translate only human-readable attribute

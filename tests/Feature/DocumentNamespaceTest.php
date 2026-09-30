@@ -269,7 +269,7 @@ test('未認証ユーザーはネームスペースの編集画面からログ�
     $this->get(route('namespaces.edit', $namespace))->assertRedirect(route('login'));
 });
 
-test('ナビゲーション定義に沿ってグループ化し、未掲載の文書は末尾の無題グループに入る', function () {
+test('従来のナビゲーション定義に沿ってツリー化し、未掲載の文書は末尾の無題ノードに入る', function () {
     $namespace = DocumentNamespace::factory()->create([
         'navigation' => [
             ['title' => 'Start', 'pages' => ['b', 'missing', 'a']],
@@ -283,28 +283,68 @@ test('ナビゲーション定義に沿ってグループ化し、未掲載の�
         ]),
     );
 
-    $groups = $namespace->navigationGroups($documents);
+    $tree = $namespace->navigationTree($documents);
 
-    expect($groups)->toHaveCount(2)
-        ->and($groups[0]['title'])->toBe('Start')
-        ->and(collect($groups[0]['documents'])->pluck('path')->all())->toBe(['b', 'a'])
-        ->and($groups[1]['title'])->toBeNull()
-        ->and(collect($groups[1]['documents'])->pluck('path')->all())->toBe(['z']);
+    expect($tree)->toHaveCount(2)
+        ->and($tree[0]['title'])->toBe('Start')
+        ->and(collect($tree[0]['children'])->pluck('document.path')->all())->toBe(['b', 'a'])
+        ->and($tree[1]['title'])->toBeNull()
+        ->and(collect($tree[1]['children'])->pluck('document.path')->all())->toBe(['z']);
 });
 
-test('ナビゲーションがない名前空間は全ての文書を1つの無題グループにする', function () {
+test('ナビゲーションがない名前空間は全ての文書を1つの無題ノードにする', function () {
     $namespace = DocumentNamespace::factory()->create(['navigation' => null]);
     $documents = Document::factory()->count(2)->for(User::factory()->create())->create([
         'document_namespace_id' => $namespace->id,
     ]);
 
-    $groups = $namespace->navigationGroups($documents);
+    $tree = $namespace->navigationTree($documents);
 
-    expect($groups)->toHaveCount(1)->and($groups[0]['title'])->toBeNull()
-        ->and($groups[0]['documents'])->toHaveCount(2);
+    expect($tree)->toHaveCount(1)->and($tree[0]['title'])->toBeNull()
+        ->and($tree[0]['children'])->toHaveCount(2);
 });
 
-test('文書ページはサイドバー用にナビゲーションのグループと順序を渡す', function () {
+test('ナビゲーションはリンク付き親ノード、入れ子、ラベルを再帰的に解決する', function () {
+    $namespace = DocumentNamespace::factory()->create([
+        'navigation' => [[
+            'title' => 'Cookbooks',
+            'page' => 'cookbooks',
+            'pages' => [[
+                'title' => 'Self-consistency',
+                'pages' => [
+                    ['page' => 'cookbooks/nouls', 'label' => 'Beginner'],
+                    ['page' => 'cookbooks/choices', 'title' => 'Choices', 'label' => 'Intermediate'],
+                    'missing',
+                ],
+            ]],
+        ]],
+    ]);
+    $documents = collect(['cookbooks', 'cookbooks/nouls', 'cookbooks/choices'])->map(
+        fn (string $path) => Document::factory()->for(User::factory()->create())->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+            'title' => $path,
+        ]),
+    );
+
+    $tree = $namespace->navigationTree($documents);
+
+    expect($tree)->toHaveCount(1)
+        ->and($tree[0]['title'])->toBe('Cookbooks')
+        ->and($tree[0]['document']->path)->toBe('cookbooks')
+        ->and($tree[0]['children'][0]['title'])->toBe('Self-consistency')
+        ->and($tree[0]['children'][0]['children'][0]['document']->path)->toBe('cookbooks/nouls')
+        ->and($tree[0]['children'][0]['children'][0]['label'])->toBe('Beginner')
+        ->and($tree[0]['children'][0]['children'][1]['title'])->toBe('Choices')
+        ->and($tree[0]['children'][0]['children'][1]['label'])->toBe('Intermediate')
+        ->and($namespace->navigationDocuments($documents)->pluck('path')->all())->toBe([
+            'cookbooks',
+            'cookbooks/nouls',
+            'cookbooks/choices',
+        ]);
+});
+
+test('文書ページはサイドバー用にナビゲーションのツリーと順序を渡す', function () {
     $user = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create([
         'slug' => 'typesafe',
@@ -323,8 +363,8 @@ test('文書ページはサイドバー用にナビゲーションのグルー�
     $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'first']))
         ->assertInertia(fn (Assert $page) => $page
             ->where('namespaceNavigation.0.title', 'Start')
-            ->where('namespaceNavigation.0.documents.0.path', 'second')
-            ->where('namespaceNavigation.0.documents.1.path', 'first'));
+            ->where('namespaceNavigation.0.children.0.document.path', 'second')
+            ->where('namespaceNavigation.0.children.1.document.path', 'first'));
 });
 
 test('名前空間の一覧はナビゲーションの順序で並ぶ', function () {

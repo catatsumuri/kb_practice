@@ -4,6 +4,10 @@ use App\Ai\Agents\TranslatorAgent;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\User;
+use Laravel\Ai\Prompts\AgentPrompt;
+use Laravel\Ai\Responses\AgentResponse;
+use Laravel\Ai\Responses\Data\Meta;
+use Laravel\Ai\Responses\Data\TextUsage;
 
 function documentWithSource(string $sourceContent): Document
 {
@@ -39,6 +43,106 @@ test('the leading blockquote above the first heading is not sent to the translat
         ->assertSuccessful();
 
     TranslatorAgent::assertPrompted("# Quick start\n\nHello");
+});
+
+test('the command compresses oversized link destinations and restores them in translated content', function () {
+    $htmlUrl = 'https://example.test/playground#share/'.str_repeat('abC123_-', 80);
+    $markdownUrl = 'https://example.test/reference/'.str_repeat('xyZ789_-', 50);
+    $source = "# Example\n\n<a href=\"{$htmlUrl}\" target=\"_blank\">Open the example</a>\n\n[Read more]({$markdownUrl})";
+    $document = documentWithSource($source);
+
+    TranslatorAgent::fake([
+        "# 例\n\n[例を開く](__PRESERVED_URL_0__)\n\n[詳しく読む](__PRESERVED_URL_1__)",
+    ]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->assertSuccessful();
+
+    TranslatorAgent::assertPrompted(function (AgentPrompt $prompt) use ($htmlUrl, $markdownUrl): bool {
+        return $prompt->contains('[Open the example](__PRESERVED_URL_0__)')
+            && $prompt->contains('[Read more](__PRESERVED_URL_1__)')
+            && ! $prompt->contains($htmlUrl)
+            && ! $prompt->contains($markdownUrl);
+    });
+
+    expect($document->fresh()->content)->toBe(
+        "# 例\n\n[例を開く]({$htmlUrl})\n\n[詳しく読む]({$markdownUrl})",
+    );
+});
+
+test('the command leaves ordinary links and fenced code unchanged', function () {
+    $shortUrl = 'https://example.test/guide';
+    $longCodeUrl = 'https://example.test/'.str_repeat('code-', 70);
+    $codeBlock = "```php\n\$url = '{$longCodeUrl}';\n```";
+    $source = "# Quick start\n\n[Guide]({$shortUrl})\n\n{$codeBlock}";
+    documentWithSource($source);
+
+    TranslatorAgent::fake(["# クイックスタート\n\n[ガイド]({$shortUrl})\n\n{$codeBlock}"]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->assertSuccessful();
+
+    TranslatorAgent::assertPrompted("# Quick start\n\n[Guide]({$shortUrl})\n\n{$codeBlock}");
+});
+
+test('the command keeps the existing document when a preserved link marker is omitted', function () {
+    $url = 'https://example.test/'.str_repeat('oversized-', 40);
+    $document = documentWithSource("# Quick start\n\n[Guide]({$url})");
+    $originalContent = $document->content;
+
+    TranslatorAgent::fake(['# クイックスタート']);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->assertFailed();
+
+    TranslatorAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('[Guide](__PRESERVED_URL_0__)'));
+    expect($document->fresh()->content)->toBe($originalContent)
+        ->and($document->revisions()->count())->toBe(0);
+});
+
+test('the command reports token usage and estimated cost for the configured model', function () {
+    documentWithSource('Hello');
+    config([
+        'ai.providers.bedrock.pricing' => [
+            'model' => 'jp.anthropic.claude-sonnet-4-6',
+            'input_per_million_tokens' => 3.00,
+            'output_per_million_tokens' => 15.00,
+        ],
+    ]);
+
+    TranslatorAgent::fake([
+        new AgentResponse(
+            'fake-invocation',
+            'こんにちは',
+            new TextUsage(inputTokens: 1_000, outputTokens: 2_000),
+            new Meta(provider: 'bedrock', model: 'jp.anthropic.claude-sonnet-4-6'),
+        ),
+    ]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->expectsOutputToContain('jp.anthropic.claude-sonnet-4-6')
+        ->expectsOutputToContain('1,000')
+        ->expectsOutputToContain('2,000')
+        ->expectsOutputToContain('$0.033000')
+        ->assertSuccessful();
+});
+
+test('the command does not estimate cost when the response model has no matching price', function () {
+    documentWithSource('Hello');
+
+    TranslatorAgent::fake([
+        new AgentResponse(
+            'fake-invocation',
+            'こんにちは',
+            new TextUsage(inputTokens: 1_000, outputTokens: 2_000),
+            new Meta(provider: 'bedrock', model: 'different-model'),
+        ),
+    ]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->expectsOutputToContain('different-model')
+        ->expectsOutputToContain('unavailable')
+        ->assertSuccessful();
 });
 
 test('text before the first heading is kept when it is not a blockquote', function () {

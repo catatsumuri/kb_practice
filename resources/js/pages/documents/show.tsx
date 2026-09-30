@@ -43,8 +43,8 @@ import { createRelativeLinkComponents } from '@/lib/relative-links';
 import { dashboard } from '@/routes';
 
 import type {
-    DocumentNavGroup,
     DocumentNavItem,
+    DocumentNavNode,
     DocumentPermissions,
     DocumentWithUser,
 } from '@/types';
@@ -52,7 +52,7 @@ import type {
 type ShowDocumentProps = {
     document: DocumentWithUser;
     namespaceDocuments: DocumentNavItem[];
-    namespaceNavigation: DocumentNavGroup[];
+    namespaceNavigation: DocumentNavNode[];
     can: DocumentPermissions;
 };
 
@@ -367,7 +367,7 @@ export default function ShowDocument({
                                 >
                                     <NamespaceNavigation
                                         namespace={namespace}
-                                        groups={namespaceNavigation}
+                                        nodes={namespaceNavigation}
                                         currentDocumentId={document.id}
                                     />
                                 </aside>

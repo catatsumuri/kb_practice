@@ -4,9 +4,12 @@ namespace App\Actions;
 
 use App\Ai\Agents\TranslatorAgent;
 use App\Models\Document;
+use Laravel\Ai\Responses\AgentResponse;
 
 class TranslateDocument
 {
+    public function __construct(private CompressTranslationLinks $compressTranslationLinks) {}
+
     /**
      * Overwrite the document's content with an AI translation of its source,
      * recording the previous content as a revision when it changes.
@@ -16,11 +19,16 @@ class TranslateDocument
      *
      * @throws \Throwable When the translation request fails.
      */
-    public function __invoke(Document $document, ?int $userId): void
+    public function __invoke(Document $document, ?int $userId): AgentResponse
     {
-        $response = (new TranslatorAgent)->prompt($document->translationSource());
+        $translationSource = $this->compressTranslationLinks->compress($document->translationSource());
+        $response = (new TranslatorAgent)->prompt($translationSource['source']);
+        $translatedContent = $this->compressTranslationLinks->restore(
+            $response->text,
+            $translationSource['replacements'],
+        );
 
-        if ($document->content !== $response->text) {
+        if ($document->content !== $translatedContent) {
             $document->revisions()->create([
                 'user_id' => $userId,
                 'title' => $document->title,
@@ -29,9 +37,11 @@ class TranslateDocument
         }
 
         $document->update([
-            'title' => $this->leadingHeading($response->text) ?? $document->title,
-            'content' => $response->text,
+            'title' => $this->leadingHeading($translatedContent) ?? $document->title,
+            'content' => $translatedContent,
         ]);
+
+        return $response;
     }
 
     /**

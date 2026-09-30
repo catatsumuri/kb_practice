@@ -46,7 +46,7 @@ class TranslateDocumentCommand extends Command
         }
 
         try {
-            $translateDocument($document, null);
+            $response = $translateDocument($document, null);
         } catch (\Throwable $e) {
             $this->components->error($e->getMessage());
 
@@ -54,7 +54,39 @@ class TranslateDocumentCommand extends Command
         }
 
         $this->components->info("Translated {$namespaceSlug}/{$path}.");
+        $this->components->twoColumnDetail('Model', $response->meta->model ?? 'unknown');
+        $this->components->twoColumnDetail('Input tokens', number_format($response->usage->inputTokens));
+        $this->components->twoColumnDetail('Output tokens', number_format($response->usage->outputTokens));
+
+        $estimatedCost = $this->estimatedCost(
+            $response->meta->model,
+            $response->usage->inputTokens,
+            $response->usage->outputTokens,
+        );
+
+        $this->components->twoColumnDetail(
+            'Estimated cost',
+            $estimatedCost === null ? 'unavailable' : '$'.number_format($estimatedCost, 6),
+        );
 
         return self::SUCCESS;
+    }
+
+    private function estimatedCost(?string $model, int $inputTokens, int $outputTokens): ?float
+    {
+        $pricing = config('ai.providers.bedrock.pricing');
+
+        if (
+            ! is_array($pricing)
+            || $model === null
+            || $model !== ($pricing['model'] ?? null)
+            || ! is_numeric($pricing['input_per_million_tokens'] ?? null)
+            || ! is_numeric($pricing['output_per_million_tokens'] ?? null)
+        ) {
+            return null;
+        }
+
+        return ($inputTokens * (float) $pricing['input_per_million_tokens']
+            + $outputTokens * (float) $pricing['output_per_million_tokens']) / 1_000_000;
     }
 }

@@ -37,7 +37,7 @@ class DocumentNamespaceController extends Controller
 
         return Inertia::render('namespaces/show', [
             'namespace' => $namespace,
-            'documents' => collect($namespace->navigationGroups($documents))->flatMap(fn (array $group) => $group['documents'])->values(),
+            'documents' => $namespace->navigationDocuments($documents)->values(),
         ]);
     }
 

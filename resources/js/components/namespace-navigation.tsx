@@ -1,26 +1,221 @@
 import { Link } from '@inertiajs/react';
+import { ChevronDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
     show,
     showByPath,
 } from '@/actions/App/Http/Controllers/DocumentController';
 import { show as showNamespace } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
+import { Badge } from '@/components/ui/badge';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import type { DocumentNamespace, DocumentNavGroup } from '@/types';
+import type {
+    DocumentNamespace,
+    DocumentNavItem,
+    DocumentNavNode,
+} from '@/types';
 
 type NamespaceNavigationProps = {
     namespace: Pick<DocumentNamespace, 'slug' | 'name'>;
-    groups: DocumentNavGroup[];
+    nodes: DocumentNavNode[];
     currentDocumentId: number;
 };
 
+type NavigationNodeProps = {
+    namespace: Pick<DocumentNamespace, 'slug'>;
+    node: DocumentNavNode;
+    currentDocumentId: number;
+    depth: number;
+};
+
+function containsDocument(node: DocumentNavNode, documentId: number): boolean {
+    return (
+        node.document?.id === documentId ||
+        node.children.some((child) => containsDocument(child, documentId))
+    );
+}
+
+function documentUrl(
+    namespace: Pick<DocumentNamespace, 'slug'>,
+    document: DocumentNavItem,
+) {
+    return document.path
+        ? showByPath({ namespace: namespace.slug, path: document.path })
+        : show(document.id);
+}
+
+function NavigationLabel({ label }: { label: string | null }) {
+    if (!label) {
+        return null;
+    }
+
+    return (
+        <Badge
+            variant="outline"
+            className="px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+        >
+            {label}
+        </Badge>
+    );
+}
+
+function NavigationLeaf({
+    namespace,
+    node,
+    currentDocumentId,
+}: Omit<NavigationNodeProps, 'depth'>) {
+    if (!node.document) {
+        return null;
+    }
+
+    const isCurrent = node.document.id === currentDocumentId;
+
+    return (
+        <Link
+            href={documentUrl(namespace, node.document)}
+            prefetch
+            aria-current={isCurrent ? 'page' : undefined}
+            className={cn(
+                '-ml-px flex items-start gap-2 border-l-2 border-transparent py-1.5 pr-2 pl-3 leading-snug text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-accent/40 hover:text-foreground',
+                isCurrent &&
+                    'border-primary bg-accent/60 font-medium text-foreground hover:border-primary',
+            )}
+        >
+            <span className="min-w-0 flex-1">{node.title}</span>
+            <NavigationLabel label={node.label} />
+        </Link>
+    );
+}
+
+function NavigationBranch({
+    namespace,
+    node,
+    currentDocumentId,
+    depth,
+}: NavigationNodeProps) {
+    const containsCurrent = containsDocument(node, currentDocumentId);
+    const [open, setOpen] = useState(depth === 0 || containsCurrent);
+
+    useEffect(() => {
+        if (containsCurrent) {
+            setOpen(true);
+        }
+    }, [containsCurrent]);
+
+    return (
+        <Collapsible open={open} onOpenChange={setOpen}>
+            {node.title && (
+                <div
+                    className={cn(
+                        'flex items-center gap-1.5',
+                        depth === 0 ? 'mb-2 px-2' : 'py-1 pr-1 pl-3',
+                    )}
+                >
+                    {depth === 0 && (
+                        <span
+                            className="size-1.5 shrink-0 rounded-full bg-primary"
+                            aria-hidden="true"
+                        />
+                    )}
+
+                    {node.document ? (
+                        <Link
+                            href={documentUrl(namespace, node.document)}
+                            prefetch
+                            aria-current={
+                                node.document.id === currentDocumentId
+                                    ? 'page'
+                                    : undefined
+                            }
+                            className={cn(
+                                'min-w-0 flex-1 font-semibold text-foreground hover:underline',
+                                depth === 0
+                                    ? 'text-xs tracking-wider'
+                                    : 'text-sm',
+                            )}
+                        >
+                            {node.title}
+                        </Link>
+                    ) : (
+                        <CollapsibleTrigger asChild>
+                            <button
+                                type="button"
+                                className={cn(
+                                    'min-w-0 flex-1 text-left font-semibold text-foreground hover:underline',
+                                    depth === 0
+                                        ? 'text-xs tracking-wider'
+                                        : 'text-sm',
+                                )}
+                            >
+                                {node.title}
+                            </button>
+                        </CollapsibleTrigger>
+                    )}
+
+                    <NavigationLabel label={node.label} />
+
+                    <CollapsibleTrigger
+                        className="rounded-sm p-0.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        aria-label={open ? '折りたたむ' : '展開する'}
+                    >
+                        <ChevronDown
+                            className={cn(
+                                'size-3.5 transition-transform',
+                                !open && '-rotate-90',
+                            )}
+                        />
+                    </CollapsibleTrigger>
+                </div>
+            )}
+
+            <CollapsibleContent>
+                <ul
+                    className={cn(
+                        'border-l',
+                        depth === 0 ? 'ml-[11px]' : 'ml-3',
+                    )}
+                >
+                    {node.children.map((child, index) => (
+                        <li
+                            key={
+                                child.document?.id ??
+                                `${child.title ?? 'node'}-${index}`
+                            }
+                        >
+                            <NavigationNode
+                                namespace={namespace}
+                                node={child}
+                                currentDocumentId={currentDocumentId}
+                                depth={depth + 1}
+                            />
+                        </li>
+                    ))}
+                </ul>
+            </CollapsibleContent>
+        </Collapsible>
+    );
+}
+
+function NavigationNode(props: NavigationNodeProps) {
+    if (props.node.children.length === 0) {
+        return <NavigationLeaf {...props} />;
+    }
+
+    return <NavigationBranch {...props} />;
+}
+
 /**
- * The left sidebar of a document page: the namespace as a header, then each
- * navigation group as a labelled section whose pages hang off a vertical
- * rail, with the current page marked on that rail.
+ * The left sidebar of a document page. Navigation nodes may link to a page,
+ * contain labelled child nodes, or do both. Top-level groups remain expanded;
+ * nested branches open automatically when they contain the current document.
  */
 export function NamespaceNavigation({
     namespace,
-    groups,
+    nodes,
     currentDocumentId,
 }: NamespaceNavigationProps) {
     return (
@@ -33,51 +228,17 @@ export function NamespaceNavigation({
             </Link>
 
             <div className="mt-4 space-y-6">
-                {groups.map((group, index) => (
-                    <section key={group.title ?? `group-${index}`}>
-                        {group.title && (
-                            <h3 className="mb-2 flex items-center gap-2 px-2 text-xs font-semibold tracking-wider text-foreground">
-                                <span
-                                    className="size-1.5 rounded-full bg-primary"
-                                    aria-hidden="true"
-                                />
-                                {group.title}
-                            </h3>
-                        )}
-
-                        <ul className="ml-[11px] border-l">
-                            {group.documents.map((item) => {
-                                const isCurrent = item.id === currentDocumentId;
-
-                                return (
-                                    <li key={item.id}>
-                                        <Link
-                                            href={
-                                                item.path
-                                                    ? showByPath({
-                                                          namespace:
-                                                              namespace.slug,
-                                                          path: item.path,
-                                                      })
-                                                    : show(item.id)
-                                            }
-                                            prefetch
-                                            aria-current={
-                                                isCurrent ? 'page' : undefined
-                                            }
-                                            className={cn(
-                                                '-ml-px block border-l-2 border-transparent py-1.5 pr-2 pl-3 leading-snug text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-accent/40 hover:text-foreground',
-                                                isCurrent &&
-                                                    'border-primary bg-accent/60 font-medium text-foreground hover:border-primary',
-                                            )}
-                                        >
-                                            {item.title}
-                                        </Link>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </section>
+                {nodes.map((node, index) => (
+                    <NavigationNode
+                        key={
+                            node.document?.id ??
+                            `${node.title ?? 'node'}-${index}`
+                        }
+                        namespace={namespace}
+                        node={node}
+                        currentDocumentId={currentDocumentId}
+                        depth={0}
+                    />
                 ))}
             </div>
         </nav>

@@ -47,42 +47,127 @@ class DocumentNamespace extends Model
     }
 
     /**
-     * Arrange documents into the namespace's navigation groups, following
-     * the order of `navigation` (a list of {title, pages: [path, ...]}).
-     * Pages without a matching document are skipped, empty groups dropped,
-     * and documents the navigation does not mention are collected, in their
-     * given order, into a trailing group without a title. Without any
-     * navigation, all documents form that single untitled group.
+     * Arrange documents into the namespace's navigation tree. Navigation
+     * entries may be document paths or nested nodes with optional page,
+     * title, label, and pages values. Missing pages and empty nodes are
+     * skipped, while unlisted documents are appended in an untitled node.
      *
      * @param  Collection<int, Document>  $documents
-     * @return list<array{title: ?string, documents: list<Document>}>
+     * @return list<array{title: ?string, document: ?Document, label: ?string, children: array}>
      */
-    public function navigationGroups(Collection $documents): array
+    public function navigationTree(Collection $documents): array
     {
         $documentsByPath = $documents->whereNotNull('path')->keyBy('path');
         $listedPaths = [];
-        $groups = [];
+        $tree = [];
 
-        foreach ($this->navigation ?? [] as $group) {
-            $groupDocuments = collect($group['pages'] ?? [])
-                ->map(fn (string $path) => $documentsByPath->get($path))
-                ->filter()
-                ->values();
+        foreach ($this->navigation ?? [] as $entry) {
+            $node = $this->resolveNavigationEntry($entry, $documentsByPath, $listedPaths);
 
-            $listedPaths = [...$listedPaths, ...$groupDocuments->pluck('path')->all()];
-
-            if ($groupDocuments->isNotEmpty()) {
-                $groups[] = ['title' => $group['title'] ?? null, 'documents' => $groupDocuments->all()];
+            if ($node !== null) {
+                $tree[] = $node;
             }
         }
 
         $unlisted = $documents->reject(fn (Document $document) => in_array($document->path, $listedPaths, true));
 
         if ($unlisted->isNotEmpty()) {
-            $groups[] = ['title' => null, 'documents' => $unlisted->values()->all()];
+            $tree[] = [
+                'title' => null,
+                'document' => null,
+                'label' => null,
+                'children' => $unlisted->map(fn (Document $document) => $this->documentNavigationNode($document))->values()->all(),
+            ];
         }
 
-        return $groups;
+        return $tree;
+    }
+
+    /**
+     * Return documents in their configured navigation order.
+     *
+     * @param  Collection<int, Document>  $documents
+     * @return Collection<int, Document>
+     */
+    public function navigationDocuments(Collection $documents): Collection
+    {
+        $flatten = function (array $nodes) use (&$flatten): array {
+            return collect($nodes)->flatMap(function (array $node) use (&$flatten): array {
+                return [
+                    ...($node['document'] ? [$node['document']] : []),
+                    ...$flatten($node['children']),
+                ];
+            })->all();
+        };
+
+        return collect($flatten($this->navigationTree($documents)));
+    }
+
+    /**
+     * @param  string|array<string, mixed>  $entry
+     * @param  Collection<string, Document>  $documentsByPath
+     * @param  list<string>  $listedPaths
+     * @return array{title: ?string, document: ?Document, label: ?string, children: array}|null
+     */
+    private function resolveNavigationEntry(string|array $entry, Collection $documentsByPath, array &$listedPaths): ?array
+    {
+        if (is_string($entry)) {
+            $document = $documentsByPath->get($entry);
+
+            if (! $document) {
+                return null;
+            }
+
+            $listedPaths[] = $entry;
+
+            return $this->documentNavigationNode($document);
+        }
+
+        $document = isset($entry['page']) && is_string($entry['page'])
+            ? $documentsByPath->get($entry['page'])
+            : null;
+
+        if ($document) {
+            $listedPaths[] = $document->path;
+        }
+
+        $children = [];
+
+        foreach (is_array($entry['pages'] ?? null) ? $entry['pages'] : [] as $child) {
+            if (! is_string($child) && ! is_array($child)) {
+                continue;
+            }
+
+            $childNode = $this->resolveNavigationEntry($child, $documentsByPath, $listedPaths);
+
+            if ($childNode !== null) {
+                $children[] = $childNode;
+            }
+        }
+
+        if (! $document && $children === []) {
+            return null;
+        }
+
+        return [
+            'title' => is_string($entry['title'] ?? null) ? $entry['title'] : $document?->title,
+            'document' => $document,
+            'label' => is_string($entry['label'] ?? null) ? $entry['label'] : null,
+            'children' => $children,
+        ];
+    }
+
+    /**
+     * @return array{title: string, document: Document, label: null, children: array}
+     */
+    private function documentNavigationNode(Document $document): array
+    {
+        return [
+            'title' => $document->title,
+            'document' => $document,
+            'label' => null,
+            'children' => [],
+        ];
     }
 
     /**

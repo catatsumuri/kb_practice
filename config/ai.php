@@ -95,6 +95,11 @@ return [
                     'smartest' => env('AWS_BEDROCK_SMARTEST_MODEL', 'jp.anthropic.claude-opus-5-5'),
                 ],
             ],
+            'pricing' => [
+                'model' => env('AWS_BEDROCK_PRICING_MODEL', 'jp.anthropic.claude-sonnet-4-6'),
+                'input_per_million_tokens' => env('AWS_BEDROCK_INPUT_COST_PER_MILLION_TOKENS', 3.00),
+                'output_per_million_tokens' => env('AWS_BEDROCK_OUTPUT_COST_PER_MILLION_TOKENS', 15.00),
+            ],
         ],
 
         'cohere' => [

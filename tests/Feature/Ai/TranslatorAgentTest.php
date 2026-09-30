@@ -37,6 +37,9 @@ test('its instructions carry the Japanese glossary and spacing rule', function (
         ->toContain('confidence = 確信度')
         ->toContain('flagship = フラッグシップ')
         ->toContain('Playground')
+        ->toContain('temperature 0')
+        ->toContain('instead of translating')
+        ->toContain('temperature as "温度"')
         ->toContain('do not put spaces between');
 });
 
@@ -46,6 +49,12 @@ test('its instructions keep JSX tag attributes other than title untouched', func
     expect($instructions)
         ->toContain('translate only human-readable attribute')
         ->toContain('(icon, cols, href, ...)');
+});
+
+test('its instructions keep compressed link markers unchanged', function () {
+    expect((string) (new TranslatorAgent)->instructions())
+        ->toContain('__PRESERVED_URL_0__')
+        ->toContain('original URL is restored after translation');
 });
 
 test('its instructions translate example prose in code blocks but not keys or identifiers', function () {
