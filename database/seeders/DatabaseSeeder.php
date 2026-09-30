@@ -73,6 +73,25 @@ class DatabaseSeeder extends Seeder
                         'patterns/intent-routing',
                     ],
                 ],
+                [
+                    'title' => 'クックブック',
+                    'page' => 'cookbooks',
+                    'pages' => [
+                        [
+                            'title' => '自己一致性',
+                            'pages' => [
+                                [
+                                    'page' => 'cookbooks/consistency_noul_cookbook',
+                                    'label' => '初級',
+                                ],
+                                [
+                                    'page' => 'cookbooks/consistency_choice_cookbook',
+                                    'label' => '初級',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
             ],
             'is_public' => true,
         ]);
@@ -266,6 +285,38 @@ class DatabaseSeeder extends Seeder
             sourceContent: File::get(database_path('seeders/typesafe-intent-routing-source.md')),
             content: File::get(database_path('seeders/typesafe-intent-routing-translation.md')),
         );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'cookbooks',
+            sourceTitle: 'Cookbooks',
+            title: 'クックブック',
+            sourceContent: File::get(database_path('seeders/typesafe-cookbooks-source.md')),
+            content: File::get(database_path('seeders/typesafe-cookbooks-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'cookbooks/consistency_noul_cookbook',
+            sourceTitle: 'Self-consistency: nouls',
+            title: '自己一致性：nouls',
+            sourceContent: File::get(database_path('seeders/typesafe-consistency_noul_cookbook-source.md')),
+            content: File::get(database_path('seeders/typesafe-consistency_noul_cookbook-translation.md')),
+        );
+
+        $this->createTranslation(
+            $users[0],
+            $typesafeNamespace,
+            path: 'cookbooks/consistency_choice_cookbook',
+            sourceTitle: 'Self-consistency: choices',
+            title: 'Self-consistency: choices',
+            sourceContent: File::get(database_path('seeders/typesafe-consistency_choice_cookbook-source.md')),
+            content: File::get(database_path('seeders/typesafe-consistency_choice_cookbook-source.md')),
+        );
+
+        $this->call(TypesafeCookbooksSeeder::class);
     }
 
     /**
