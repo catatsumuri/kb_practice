@@ -6,10 +6,12 @@ import type { BreadcrumbItem } from '@/types';
 export default function AppLayout({
     breadcrumbs = [],
     wide,
+    documentReader = false,
     children,
 }: {
     breadcrumbs?: BreadcrumbItem[];
     wide?: boolean;
+    documentReader?: boolean;
     children: React.ReactNode;
 }) {
     const { auth } = usePage().props;
@@ -20,14 +22,21 @@ export default function AppLayout({
     // sidebar/header shell.
     if (!auth.user) {
         return (
-            <GuestLayout breadcrumbs={breadcrumbs} wide={wide}>
+            <GuestLayout
+                breadcrumbs={breadcrumbs}
+                wide={wide}
+                documentReader={documentReader}
+            >
                 {children}
             </GuestLayout>
         );
     }
 
     return (
-        <AppLayoutTemplate breadcrumbs={breadcrumbs}>
+        <AppLayoutTemplate
+            breadcrumbs={breadcrumbs}
+            documentReader={documentReader}
+        >
             {children}
         </AppLayoutTemplate>
     );

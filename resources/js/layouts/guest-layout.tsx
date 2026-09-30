@@ -10,6 +10,7 @@ import type { GuestLayoutProps } from '@/types';
 export default function GuestLayout({
     breadcrumbs = [],
     wide = false,
+    documentReader = false,
     children,
 }: GuestLayoutProps) {
     const { __ } = lang();
@@ -20,6 +21,8 @@ export default function GuestLayout({
             className={cn(
                 'mx-auto grid min-w-0 gap-4 p-4',
                 wide ? 'max-w-7xl' : 'max-w-3xl',
+                documentReader &&
+                    'lg:h-dvh lg:grid-rows-[auto_auto_minmax(0,1fr)] lg:overflow-hidden',
             )}
         >
             <header className="flex items-center justify-between text-sm">

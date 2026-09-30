@@ -5,6 +5,7 @@ export type AppLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
     wide?: boolean;
+    documentReader?: boolean;
 };
 
 export type AppVariant = 'header' | 'sidebar';
@@ -25,4 +26,5 @@ export type GuestLayoutProps = {
     children: ReactNode;
     breadcrumbs?: BreadcrumbItem[];
     wide?: boolean;
+    documentReader?: boolean;
 };

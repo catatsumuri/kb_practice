@@ -9,7 +9,7 @@ import {
     PanelRightClose,
     PanelRightOpen,
 } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Components } from 'react-markdown';
 import {
     create,
@@ -40,6 +40,7 @@ import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
 import { useSyncedScroll } from '@/hooks/use-synced-scroll';
 import { documentHref, visibilityLabels } from '@/lib/document';
 import { createRelativeLinkComponents } from '@/lib/relative-links';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 import type {
@@ -68,6 +69,7 @@ export default function ShowDocument({
     const [showSource, setShowSource] = useState(false);
     const hasSource = Boolean(document.source_content);
     const hasNamespaceNav = Boolean(namespace) && namespaceDocuments.length > 0;
+    const documentReader = hasNamespaceNav;
     const [showNav, setShowNav] = usePersistedBoolean(
         'documents.showNav',
         true,
@@ -79,11 +81,47 @@ export default function ShowDocument({
     const navBeforeSourceRef = useRef(showNav);
     const translationPaneRef = useRef<HTMLDivElement>(null);
     const sourcePaneRef = useRef<HTMLDivElement>(null);
+    const contentPaneRef = useRef<HTMLDivElement>(null);
+    const rightPanelRef = useRef<HTMLElement>(null);
+    const navigationFrameRef = useRef<number | null>(null);
     const splitViewVisible = Boolean(document.source_content) && showSource;
 
     useSyncedScroll(translationPaneRef, sourcePaneRef, {
         enabled: splitViewVisible,
     });
+
+    useEffect(
+        () => () => {
+            if (navigationFrameRef.current !== null) {
+                cancelAnimationFrame(navigationFrameRef.current);
+            }
+        },
+        [],
+    );
+
+    function handleDocumentNavigate(documentId: number) {
+        setShowSource(false);
+
+        if (navigationFrameRef.current !== null) {
+            cancelAnimationFrame(navigationFrameRef.current);
+        }
+
+        navigationFrameRef.current = requestAnimationFrame(() => {
+            navigationFrameRef.current = null;
+
+            if (
+                contentPaneRef.current?.dataset.documentId !==
+                String(documentId)
+            ) {
+                return;
+            }
+
+            contentPaneRef.current.scrollTop = 0;
+            if (rightPanelRef.current) {
+                rightPanelRef.current.scrollTop = 0;
+            }
+        });
+    }
 
     // Comparing translation and original side by side already needs both
     // columns' worth of room, so showing the source view hides the left
@@ -222,6 +260,7 @@ export default function ShowDocument({
 
     setLayoutProps({
         wide: true,
+        documentReader,
         breadcrumbs: can.update
             ? [
                   { title: 'ドキュメント', href: index() },
@@ -252,7 +291,13 @@ export default function ShowDocument({
         <>
             <Head title={document.title} />
 
-            <main className="grid min-w-0 gap-4 p-4">
+            <main
+                className={cn(
+                    'grid min-w-0 gap-4 p-4',
+                    documentReader &&
+                        'lg:min-h-0 lg:flex-1 lg:grid-rows-[auto_minmax(0,1fr)] lg:overflow-hidden',
+                )}
+            >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2">
                         {hasNamespaceNav && (
@@ -355,94 +400,159 @@ export default function ShowDocument({
                     </div>
                 </div>
 
-                <Card className="min-w-0">
-                    <CardContent>
-                        <div className="lg:flex lg:items-start lg:gap-6">
+                <Card
+                    className={cn(
+                        'min-w-0',
+                        documentReader && 'lg:min-h-0 lg:overflow-hidden',
+                    )}
+                >
+                    <CardContent
+                        className={cn(documentReader && 'lg:min-h-0 lg:flex-1')}
+                    >
+                        <div
+                            className={cn(
+                                'lg:flex lg:items-start lg:gap-6',
+                                documentReader &&
+                                    'lg:h-full lg:min-h-0 lg:items-stretch',
+                            )}
+                        >
                             {hasNamespaceNav && showNav && namespace && (
                                 <aside
-                                    className="mb-4 self-start overflow-y-auto lg:sticky lg:top-4 lg:mb-0 lg:w-64 lg:flex-shrink-0"
-                                    style={{
-                                        maxHeight: 'calc(100vh - 2rem)',
-                                    }}
+                                    className="mb-4 max-h-[calc(100dvh-2rem)] self-start overflow-y-auto lg:mb-0 lg:h-full lg:max-h-none lg:w-64 lg:shrink-0 lg:overscroll-contain"
+                                    scroll-region=""
                                 >
                                     <NamespaceNavigation
+                                        key={namespace.slug}
                                         namespace={namespace}
                                         nodes={namespaceNavigation}
                                         currentDocumentId={document.id}
+                                        onDocumentNavigate={
+                                            handleDocumentNavigate
+                                        }
                                     />
                                 </aside>
                             )}
 
-                            <div className="min-w-0 lg:flex-1">
-                                {document.source_content && showSource ? (
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="rounded-md border">
-                                            <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
-                                                {__('Translation')}
-                                            </p>
-                                            <div
-                                                ref={translationPaneRef}
-                                                className="overflow-y-auto p-4"
-                                                style={{
-                                                    maxHeight:
-                                                        'calc(100vh - 2rem)',
-                                                }}
-                                            >
-                                                <InkstreamMarkdown
-                                                    ogpEndpoint={ogpEndpoint}
-                                                    resolveWikilink={
-                                                        resolveWikilink
-                                                    }
-                                                    components={
-                                                        translationLinkComponents
-                                                    }
-                                                >
-                                                    {document.content}
-                                                </InkstreamMarkdown>
-                                            </div>
-                                        </div>
-                                        <div className="rounded-md border">
-                                            <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
-                                                {__('Original')}
-                                            </p>
-                                            <div
-                                                ref={sourcePaneRef}
-                                                className="overflow-y-auto p-4"
-                                                style={{
-                                                    maxHeight:
-                                                        'calc(100vh - 2rem)',
-                                                }}
-                                            >
-                                                <InkstreamMarkdown
-                                                    ogpEndpoint={ogpEndpoint}
-                                                    components={
-                                                        sourceLinkComponents
-                                                    }
-                                                >
-                                                    {document.source_content}
-                                                </InkstreamMarkdown>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <InkstreamMarkdown
-                                        ogpEndpoint={ogpEndpoint}
-                                        resolveWikilink={resolveWikilink}
-                                        components={translationLinkComponents}
-                                    >
-                                        {document.content}
-                                    </InkstreamMarkdown>
+                            <div
+                                ref={contentPaneRef}
+                                data-document-id={document.id}
+                                scroll-region=""
+                                className={cn(
+                                    'min-w-0 lg:flex-1',
+                                    documentReader &&
+                                        'lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain',
                                 )}
+                            >
+                                <div
+                                    key={document.id}
+                                    className={cn(
+                                        documentReader && 'lg:h-full',
+                                    )}
+                                >
+                                    {document.source_content && showSource ? (
+                                        <div
+                                            className={cn(
+                                                'grid gap-4 md:grid-cols-2',
+                                                documentReader &&
+                                                    'lg:h-full lg:min-h-0',
+                                            )}
+                                        >
+                                            <div
+                                                className={cn(
+                                                    'rounded-md border',
+                                                    documentReader &&
+                                                        'lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden',
+                                                )}
+                                            >
+                                                <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                                    {__('Translation')}
+                                                </p>
+                                                <div
+                                                    ref={translationPaneRef}
+                                                    scroll-region=""
+                                                    className={cn(
+                                                        'max-h-[calc(100dvh-2rem)] overflow-y-auto p-4',
+                                                        documentReader &&
+                                                            'lg:max-h-none lg:min-h-0 lg:flex-1 lg:overscroll-contain',
+                                                    )}
+                                                >
+                                                    <InkstreamMarkdown
+                                                        ogpEndpoint={
+                                                            ogpEndpoint
+                                                        }
+                                                        resolveWikilink={
+                                                            resolveWikilink
+                                                        }
+                                                        components={
+                                                            translationLinkComponents
+                                                        }
+                                                    >
+                                                        {document.content}
+                                                    </InkstreamMarkdown>
+                                                </div>
+                                            </div>
+                                            <div
+                                                className={cn(
+                                                    'rounded-md border',
+                                                    documentReader &&
+                                                        'lg:flex lg:min-h-0 lg:flex-col lg:overflow-hidden',
+                                                )}
+                                            >
+                                                <p className="border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
+                                                    {__('Original')}
+                                                </p>
+                                                <div
+                                                    ref={sourcePaneRef}
+                                                    scroll-region=""
+                                                    className={cn(
+                                                        'max-h-[calc(100dvh-2rem)] overflow-y-auto p-4',
+                                                        documentReader &&
+                                                            'lg:max-h-none lg:min-h-0 lg:flex-1 lg:overscroll-contain',
+                                                    )}
+                                                >
+                                                    <InkstreamMarkdown
+                                                        ogpEndpoint={
+                                                            ogpEndpoint
+                                                        }
+                                                        components={
+                                                            sourceLinkComponents
+                                                        }
+                                                    >
+                                                        {
+                                                            document.source_content
+                                                        }
+                                                    </InkstreamMarkdown>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <InkstreamMarkdown
+                                            ogpEndpoint={ogpEndpoint}
+                                            resolveWikilink={resolveWikilink}
+                                            components={
+                                                translationLinkComponents
+                                            }
+                                        >
+                                            {document.content}
+                                        </InkstreamMarkdown>
+                                    )}
+                                </div>
                             </div>
 
                             {showRightPanel && (
                                 <aside
-                                    className="mt-4 self-start overflow-y-auto lg:sticky lg:top-4 lg:mt-0 lg:w-80 lg:flex-shrink-0"
-                                    style={{
-                                        maxHeight: 'calc(100vh - 2rem)',
-                                    }}
+                                    ref={rightPanelRef}
+                                    scroll-region=""
+                                    className={cn(
+                                        'mt-4 max-h-[calc(100dvh-2rem)] self-start overflow-y-auto lg:sticky lg:top-4 lg:mt-0 lg:w-80 lg:shrink-0',
+                                        documentReader &&
+                                            'lg:static lg:h-full lg:max-h-none lg:overscroll-contain',
+                                    )}
                                 >
-                                    <div className="flex flex-col gap-4">
+                                    <div
+                                        key={document.id}
+                                        className="flex flex-col gap-4"
+                                    >
                                         <div className="rounded-md border p-4">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <CardTitle>

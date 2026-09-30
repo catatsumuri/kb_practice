@@ -1,6 +1,7 @@
-import { Link } from '@inertiajs/react';
+import { Link, useRemember } from '@inertiajs/react';
+import type { Page } from '@inertiajs/core';
 import { ChevronDown } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import {
     show,
     showByPath,
@@ -23,6 +24,7 @@ type NamespaceNavigationProps = {
     namespace: Pick<DocumentNamespace, 'slug' | 'name'>;
     nodes: DocumentNavNode[];
     currentDocumentId: number;
+    onDocumentNavigate?: (documentId: number) => void;
 };
 
 type NavigationNodeProps = {
@@ -30,7 +32,39 @@ type NavigationNodeProps = {
     node: DocumentNavNode;
     currentDocumentId: number;
     depth: number;
+    nodePath: string;
+    onDocumentNavigate?: (documentId: number) => void;
 };
+
+function preservesNavigation(page: Page, namespaceSlug: string): boolean {
+    const document = page.props.document as
+        | { namespace?: { slug: string } | null }
+        | undefined;
+
+    return (
+        window.matchMedia('(min-width: 1024px)').matches &&
+        page.component === 'documents/show' &&
+        document?.namespace?.slug === namespaceSlug
+    );
+}
+
+function documentNavigationOptions(
+    namespaceSlug: string,
+    onDocumentNavigate?: (documentId: number) => void,
+) {
+    return {
+        preserveState: (page: Page) => preservesNavigation(page, namespaceSlug),
+        preserveScroll: (page: Page) =>
+            preservesNavigation(page, namespaceSlug),
+        onSuccess: (page: Page) => {
+            const document = page.props.document as { id: number } | undefined;
+
+            if (document && preservesNavigation(page, namespaceSlug)) {
+                onDocumentNavigate?.(document.id);
+            }
+        },
+    };
+}
 
 function containsDocument(node: DocumentNavNode, documentId: number): boolean {
     return (
@@ -67,6 +101,7 @@ function NavigationLeaf({
     namespace,
     node,
     currentDocumentId,
+    onDocumentNavigate,
 }: Omit<NavigationNodeProps, 'depth'>) {
     if (!node.document) {
         return null;
@@ -78,6 +113,7 @@ function NavigationLeaf({
         <Link
             href={documentUrl(namespace, node.document)}
             prefetch
+            {...documentNavigationOptions(namespace.slug, onDocumentNavigate)}
             aria-current={isCurrent ? 'page' : undefined}
             className={cn(
                 '-ml-px flex items-start gap-2 border-l-2 border-transparent py-1.5 pr-2 pl-3 leading-snug text-muted-foreground transition-colors hover:border-foreground/30 hover:bg-accent/40 hover:text-foreground',
@@ -96,9 +132,14 @@ function NavigationBranch({
     node,
     currentDocumentId,
     depth,
+    nodePath,
+    onDocumentNavigate,
 }: NavigationNodeProps) {
     const containsCurrent = containsDocument(node, currentDocumentId);
-    const [open, setOpen] = useState(depth === 0 || containsCurrent);
+    const [open, setOpen] = useRemember(
+        depth === 0 || containsCurrent,
+        `namespaceNavigation:${namespace.slug}:${nodePath}`,
+    );
 
     useEffect(() => {
         if (containsCurrent) {
@@ -126,6 +167,10 @@ function NavigationBranch({
                         <Link
                             href={documentUrl(namespace, node.document)}
                             prefetch
+                            {...documentNavigationOptions(
+                                namespace.slug,
+                                onDocumentNavigate,
+                            )}
                             aria-current={
                                 node.document.id === currentDocumentId
                                     ? 'page'
@@ -191,6 +236,8 @@ function NavigationBranch({
                                 node={child}
                                 currentDocumentId={currentDocumentId}
                                 depth={depth + 1}
+                                nodePath={`${nodePath}.${index}`}
+                                onDocumentNavigate={onDocumentNavigate}
                             />
                         </li>
                     ))}
@@ -217,6 +264,7 @@ export function NamespaceNavigation({
     namespace,
     nodes,
     currentDocumentId,
+    onDocumentNavigate,
 }: NamespaceNavigationProps) {
     return (
         <nav className="rounded-md border p-3 text-sm">
@@ -238,6 +286,8 @@ export function NamespaceNavigation({
                         node={node}
                         currentDocumentId={currentDocumentId}
                         depth={0}
+                        nodePath={String(index)}
+                        onDocumentNavigate={onDocumentNavigate}
                     />
                 ))}
             </div>
