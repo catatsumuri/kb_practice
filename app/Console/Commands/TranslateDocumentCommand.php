@@ -46,7 +46,7 @@ class TranslateDocumentCommand extends Command
         }
 
         try {
-            $response = $translateDocument($document, null);
+            $result = $translateDocument($document, null);
         } catch (\Throwable $e) {
             $this->components->error($e->getMessage());
 
@@ -54,14 +54,18 @@ class TranslateDocumentCommand extends Command
         }
 
         $this->components->info("Translated {$namespaceSlug}/{$path}.");
-        $this->components->twoColumnDetail('Model', $response->meta->model ?? 'unknown');
-        $this->components->twoColumnDetail('Input tokens', number_format($response->usage->inputTokens));
-        $this->components->twoColumnDetail('Output tokens', number_format($response->usage->outputTokens));
+        if ($result->chunkCount > 1) {
+            $this->components->twoColumnDetail('Chunks', (string) $result->chunkCount);
+        }
+
+        $this->components->twoColumnDetail('Model', $result->model ?? 'unknown');
+        $this->components->twoColumnDetail('Input tokens', number_format($result->inputTokens));
+        $this->components->twoColumnDetail('Output tokens', number_format($result->outputTokens));
 
         $estimatedCost = $this->estimatedCost(
-            $response->meta->model,
-            $response->usage->inputTokens,
-            $response->usage->outputTokens,
+            $result->model,
+            $result->inputTokens,
+            $result->outputTokens,
         );
 
         $this->components->twoColumnDetail(

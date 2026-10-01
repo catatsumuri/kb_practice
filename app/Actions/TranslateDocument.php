@@ -4,27 +4,48 @@ namespace App\Actions;
 
 use App\Ai\Agents\TranslatorAgent;
 use App\Models\Document;
-use Laravel\Ai\Responses\AgentResponse;
 
 class TranslateDocument
 {
-    public function __construct(private CompressTranslationLinks $compressTranslationLinks) {}
+    public function __construct(
+        private CompressTranslationLinks $compressTranslationLinks,
+        private SplitMarkdownForTranslation $splitMarkdownForTranslation,
+    ) {}
 
     /**
      * Overwrite the document's content with an AI translation of its source,
      * recording the previous content as a revision when it changes.
      *
+     * A long source is split into chunks translated one after another, so
+     * no single request outlives the provider timeout; nothing is written
+     * unless every chunk succeeds.
+     *
      * Runs synchronously; move to a queued job if translations of longer
      * articles make this too slow for a request/response cycle.
      *
-     * @throws \Throwable When the translation request fails.
+     * @throws \Throwable When a translation request fails.
      */
-    public function __invoke(Document $document, ?int $userId): AgentResponse
+    public function __invoke(Document $document, ?int $userId): TranslationResult
     {
         $translationSource = $this->compressTranslationLinks->compress($document->translationSource());
-        $response = (new TranslatorAgent)->prompt($translationSource['source']);
+        $chunks = ($this->splitMarkdownForTranslation)($translationSource['source']);
+
+        $translatedChunks = [];
+        $model = null;
+        $inputTokens = 0;
+        $outputTokens = 0;
+
+        foreach ($chunks as $chunk) {
+            $response = (new TranslatorAgent)->prompt($chunk['text']);
+
+            $translatedChunks[] = $response->text;
+            $model ??= $response->meta->model;
+            $inputTokens += $response->usage->inputTokens;
+            $outputTokens += $response->usage->outputTokens;
+        }
+
         $translatedContent = $this->compressTranslationLinks->restore(
-            $response->text,
+            ($this->splitMarkdownForTranslation)->join($chunks, $translatedChunks),
             $translationSource['replacements'],
         );
 
@@ -41,7 +62,7 @@ class TranslateDocument
             'content' => $translatedContent,
         ]);
 
-        return $response;
+        return new TranslationResult($model, $inputTokens, $outputTokens, count($chunks));
     }
 
     /**

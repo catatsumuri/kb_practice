@@ -10,7 +10,8 @@ class CompressTranslationLinks
     private const MAX_URL_LENGTH = 256;
 
     /**
-     * Replace oversized link destinations with short markers for translation.
+     * Replace oversized link destinations (inline and reference-style) with
+     * short markers for translation.
      * Raw HTML anchors are converted to Markdown links so rendered output
      * remains clickable after their original destinations are restored.
      *
@@ -56,6 +57,18 @@ class CompressTranslationLinks
                     $label = str_replace(['\\', '[', ']'], ['\\\\', '\\[', '\\]'], $label);
 
                     return '['.$label.']('.$placeholderFor($url).')';
+                },
+                $segment,
+            ) ?? $segment;
+
+            $segment = preg_replace_callback(
+                '~^(?<prefix>[ \t]{0,3}\[[^\]\n]+\]:[ \t]*<?)(?<url>https?://[^\s>]+)(?<suffix>>?)~im',
+                function (array $matches) use ($placeholderFor): string {
+                    if (mb_strlen($matches['url']) <= self::MAX_URL_LENGTH) {
+                        return $matches[0];
+                    }
+
+                    return $matches['prefix'].$placeholderFor($matches['url']).$matches['suffix'];
                 },
                 $segment,
             ) ?? $segment;

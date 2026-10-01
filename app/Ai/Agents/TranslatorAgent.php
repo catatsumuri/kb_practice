@@ -76,6 +76,11 @@ class TranslatorAgent implements Agent
             or "」" and would be followed directly by a letter (e.g. Japanese
             text), put a single half-width space after the closing marker.
 
+            The text may be one fragment of a longer document, so it can
+            begin or end in the middle of a section or inside a fenced code
+            block. Translate it as it is: never add, remove or move a code
+            fence line, and do not complete or summarize what is missing.
+
             Respond with only the translated text. Do not add a preamble,
             explanation, or any note about the source language.
             INSTRUCTIONS;

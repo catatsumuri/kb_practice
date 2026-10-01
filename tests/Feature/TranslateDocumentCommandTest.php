@@ -195,3 +195,56 @@ test('the title is kept when the translation has no leading heading', function (
 
     expect($document->fresh()->title)->toBe($title);
 });
+
+test('a long source is translated in chunks whose usage is summed and whose parts are rejoined', function () {
+    $section = fn (string $heading) => "## {$heading}\n\n".implode("\n", array_fill(0, 200, 'A sentence of ordinary prose that costs tokens.'))."\n\n";
+    $document = documentWithSource("# Title\n\n".$section('One').$section('Two').$section('Three').'End');
+
+    $response = fn (string $text) => new AgentResponse(
+        'fake-invocation',
+        $text,
+        new TextUsage(inputTokens: 1_000, outputTokens: 2_000),
+        new Meta(provider: 'bedrock', model: 'jp.anthropic.claude-sonnet-4-6'),
+    );
+
+    TranslatorAgent::fake([$response("# 題\n\n## 一\n"), $response("## 二\n"), $response("## 三\n\n終")]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->expectsOutputToContain('Chunks')
+        ->expectsOutputToContain('3,000')
+        ->expectsOutputToContain('6,000')
+        ->assertSuccessful();
+
+    expect($document->fresh()->content)->toBe("# 題\n\n## 一\n\n## 二\n\n## 三\n\n終");
+});
+
+test('nothing is written when a later chunk fails', function () {
+    $section = fn (string $heading) => "## {$heading}\n\n".implode("\n", array_fill(0, 200, 'A sentence of ordinary prose that costs tokens.'))."\n\n";
+    $document = documentWithSource("# Title\n\n".$section('One').$section('Two').'End');
+    $originalContent = $document->content;
+
+    TranslatorAgent::fake([
+        '# 題',
+        fn () => throw new RuntimeException('Bedrock timed out'),
+    ]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->assertFailed();
+
+    expect($document->fresh()->content)->toBe($originalContent)
+        ->and($document->revisions()->count())->toBe(0);
+});
+
+test('the command compresses oversized reference-style link definitions and restores them', function () {
+    $url = 'https://example.test/playground#share/'.str_repeat('abC123_-', 80);
+    $document = documentWithSource("# Example\n\n[Open][playground]\n\n[playground]: {$url}");
+
+    TranslatorAgent::fake(["# 例\n\n[開く][playground]\n\n[playground]: __PRESERVED_URL_0__"]);
+
+    $this->artisan('documents:translate', ['address' => 'typesafe/introduction/quickstart'])
+        ->assertSuccessful();
+
+    TranslatorAgent::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('[playground]: __PRESERVED_URL_0__')
+        && ! $prompt->contains($url));
+    expect($document->fresh()->content)->toBe("# 例\n\n[開く][playground]\n\n[playground]: {$url}");
+});

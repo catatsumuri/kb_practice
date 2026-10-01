@@ -75,3 +75,9 @@ test('it allows long articles more than the default 60 second request timeout', 
     expect($attributes)->toHaveCount(1)
         ->and($attributes[0]->newInstance()->value)->toBeGreaterThan(60);
 });
+
+test('its instructions treat the text as a possible fragment and keep code fences unchanged', function () {
+    expect((string) (new TranslatorAgent)->instructions())
+        ->toContain('one fragment of a longer document')
+        ->toContain('never add, remove or move a code');
+});
