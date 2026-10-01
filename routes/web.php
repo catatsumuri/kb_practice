@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentNamespaceController;
+use App\Http\Controllers\NamespaceBackupController;
 use App\Http\Controllers\OgpController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,6 +27,16 @@ Route::get('documents/ogp', [OgpController::class, 'fetch'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::get('namespaces/{namespace}/backups', [NamespaceBackupController::class, 'index'])
+        ->name('namespaces.backups.index');
+    Route::post('namespaces/{namespace}/backups', [NamespaceBackupController::class, 'store'])
+        ->name('namespaces.backups.store');
+    Route::delete('namespaces/{namespace}/backups/{backup}', [NamespaceBackupController::class, 'destroy'])
+        ->where('backup', '[^/]+\\.zip')
+        ->name('namespaces.backups.destroy');
+    Route::get('namespaces/{namespace}/backups/{backup}/download', [NamespaceBackupController::class, 'download'])
+        ->where('backup', '[^/]+\\.zip')
+        ->name('namespaces.backups.download');
     Route::post('documents/fetch-source', [DocumentController::class, 'fetchSource'])->name('documents.fetch-source');
     Route::post('documents/{document}/translate', [DocumentController::class, 'translate'])
         ->whereNumber('document')

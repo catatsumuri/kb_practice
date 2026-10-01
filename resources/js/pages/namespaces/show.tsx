@@ -10,6 +10,7 @@ import {
     show,
 } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
 import { Badge } from '@/components/ui/badge';
+import { index as backups } from '@/actions/App/Http/Controllers/NamespaceBackupController';
 import { Button } from '@/components/ui/button';
 import { DocumentMeta } from '@/components/document-meta';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,7 +80,12 @@ export default function ShowNamespace({
                         )}
                     </div>
                     {isOwner && (
-                        <div className="flex shrink-0 gap-2">
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                            <Button asChild variant="outline">
+                                <Link href={backups(namespace.slug)}>
+                                    バックアップ
+                                </Link>
+                            </Button>
                             <Button asChild variant="outline">
                                 <Link href={editNamespace(namespace.slug)}>
                                     設定を編集

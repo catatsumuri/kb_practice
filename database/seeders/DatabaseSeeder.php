@@ -2,22 +2,16 @@
 
 namespace Database\Seeders;
 
+use App\Actions\BackupNamespace;
+use App\Actions\ListNamespaceBackups;
 use App\Actions\RestoreNamespace;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
 
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
-
-    /**
-     * Where the typesafe namespace backup is placed for seeding. It isn't
-     * committed (storage/app/private is gitignored); create it with
-     * `artisan namespace:backup typesafe` and copy it here.
-     */
-    public const TYPESAFE_BACKUP = 'app/private/seeds/typesafe.zip';
 
     /**
      * Seed the application's database.
@@ -35,23 +29,27 @@ class DatabaseSeeder extends Seeder
             ]),
         ];
 
-        $this->restoreTypesafeNamespace($users[0]);
+        $this->restoreNamespaces($users[0]);
     }
 
     /**
-     * Restore the typesafe namespace from its backup archive, owned by the
-     * given user. Skipped with a warning when the archive isn't present.
+     * Restore the latest backup of each namespace, owned by the first
+     * seeded user. Backups are ordered by their archive creation time.
      */
-    private function restoreTypesafeNamespace(User $owner): void
+    private function restoreNamespaces(User $owner): void
     {
-        $path = storage_path(self::TYPESAFE_BACKUP);
+        $backups = collect(app(ListNamespaceBackups::class)())
+            ->unique('namespace_slug');
 
-        if (! File::exists($path)) {
-            $this->command?->warn('Skipping typesafe: no backup at storage/'.self::TYPESAFE_BACKUP.'.');
+        if ($backups->isEmpty()) {
+            $this->command->warn('Skipping namespaces: no supported backups in '.BackupNamespace::directory().'.');
 
             return;
         }
 
-        app(RestoreNamespace::class)($path, $owner);
+        foreach ($backups as $backup) {
+            app(RestoreNamespace::class)(BackupNamespace::directory().'/'.$backup['filename'], $owner);
+            $this->command->info('Restored '.$backup['namespace_slug'].' from '.$backup['filename'].'.');
+        }
     }
 }
