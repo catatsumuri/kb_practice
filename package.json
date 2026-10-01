@@ -11,7 +11,7 @@
         "types:check": "tsc --noEmit"
     },
     "dependencies": {
-        "@catatsumuri/inkstream": "~0.6.0",
+        "@catatsumuri/inkstream": "~0.7.1",
         "@codemirror/lang-markdown": "^6.5.1",
         "@erag/lang-sync-inertia": "^3.0.0",
         "@inertiajs/react": "^3.0.0",
