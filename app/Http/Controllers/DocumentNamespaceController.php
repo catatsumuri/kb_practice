@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CheckNamespaceSources;
 use App\Enums\DocumentVisibility;
+use App\Enums\SourceCheckStatus;
+use App\Models\Document;
 use App\Models\DocumentNamespace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,15 +44,52 @@ class DocumentNamespaceController extends Controller
                 fn ($query) => $query->where('user_id', $request->user()->id),
                 fn ($query) => $query->where('visibility', DocumentVisibility::Public),
             )
-            ->select(['id', 'user_id', 'title', 'visibility', 'created_at', 'path'])
-            ->with('user:id,name')
+            ->select(['id', 'user_id', 'title', 'visibility', 'created_at', 'path', 'document_source_snapshot_id', 'content', 'source_content'])
+            ->with(['user:id,name', 'adoptedSourceSnapshot:id,fetched_at'])
+            ->withMax('sourceSnapshots as latest_source_snapshot_id', 'id')
             ->latest()
             ->get();
 
         return Inertia::render('namespaces/show', [
             'namespace' => $namespace,
-            'documents' => $namespace->navigationDocuments($documents)->values(),
+            'documents' => $namespace->navigationDocuments($documents)
+                ->each(function (Document $document) {
+                    $document->setAttribute(
+                        'has_pending_source_update',
+                        $document->latest_source_snapshot_id !== null
+                            && $document->latest_source_snapshot_id !== $document->document_source_snapshot_id,
+                    );
+                    $document->setAttribute('is_untranslated', $document->isUntranslated());
+                    $document->makeHidden(['content', 'source_content']);
+                })
+                ->values(),
         ]);
+    }
+
+    /**
+     * Check every document's source URL in the namespace for updates,
+     * recording new (not-yet-adopted) snapshots for the user to review.
+     */
+    public function checkSources(DocumentNamespace $namespace, CheckNamespaceSources $checkNamespaceSources): RedirectResponse
+    {
+        Gate::authorize('update', $namespace);
+
+        $counts = $checkNamespaceSources($namespace)->countBy(fn ($result) => $result->status->value);
+
+        $failed = $counts->get(SourceCheckStatus::Failed->value, 0);
+
+        Inertia::flash('toast', [
+            'type' => $failed > 0 ? 'error' : 'success',
+            'message' => sprintf(
+                '新規更新 %d件 / 取り込み待ち %d件 / 変更なし %d件 / 失敗 %d件',
+                $counts->get(SourceCheckStatus::Updated->value, 0),
+                $counts->get(SourceCheckStatus::Pending->value, 0),
+                $counts->get(SourceCheckStatus::Unchanged->value, 0),
+                $failed,
+            ),
+        ]);
+
+        return back();
     }
 
     /**

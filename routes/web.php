@@ -27,6 +27,8 @@ Route::get('documents/ogp', [OgpController::class, 'fetch'])
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+    Route::post('namespaces/{namespace}/check-sources', [DocumentNamespaceController::class, 'checkSources'])
+        ->name('namespaces.check-sources');
     Route::get('namespaces/{namespace}/backups', [NamespaceBackupController::class, 'index'])
         ->name('namespaces.backups.index');
     Route::post('namespaces/{namespace}/backups', [NamespaceBackupController::class, 'store'])

@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CheckDocumentSource;
+use App\Actions\FetchSourceContent;
 use App\Actions\TranslateDocument;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
-use App\Http\Controllers\Concerns\ValidatesFetchableUrls;
+use App\Enums\SourceCheckStatus;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\DocumentRevision;
@@ -14,16 +16,12 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DocumentController extends Controller
 {
-    use ValidatesFetchableUrls;
-
     /**
      * Display a listing of the resource.
      */
@@ -103,7 +101,7 @@ class DocumentController extends Controller
         $document = $request->user()->documents()->create($validated);
 
         if (filled($document->source_content)) {
-            $this->recordSourceSnapshot($document, $document->source_content, $document->source_title, adopt: true);
+            $document->recordSourceSnapshot($document->source_content, $document->source_title, adopt: true);
         }
 
         Inertia::flash('toast', [
@@ -118,7 +116,7 @@ class DocumentController extends Controller
      * Fetch the content at a source URL so it can be used as the starting
      * point for a translation, without leaving the create form.
      */
-    public function fetchSource(Request $request): Response
+    public function fetchSource(Request $request, FetchSourceContent $fetchSourceContent): Response
     {
         Gate::authorize('create', Document::class);
 
@@ -126,7 +124,7 @@ class DocumentController extends Controller
             'source_url' => ['required', 'url:http,https', 'max:2048'],
         ]);
 
-        $fetched = $this->fetchAndParseSource($validated['source_url']);
+        $fetched = $fetchSourceContent($validated['source_url']);
 
         return Inertia::render('documents/create', [
             'fetchedSource' => [
@@ -142,40 +140,19 @@ class DocumentController extends Controller
      * since the last adopted snapshot, record a new (not-yet-adopted)
      * snapshot for the edit page to offer as a diff.
      */
-    public function refreshSource(Document $document): RedirectResponse
+    public function refreshSource(Document $document, CheckDocumentSource $checkDocumentSource): RedirectResponse
     {
         Gate::authorize('update', $document);
 
         abort_if(blank($document->source_url), 422);
 
-        try {
-            $fetched = $this->fetchAndParseSource($document->source_url);
-        } catch (ValidationException $exception) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => $exception->errors()['source_url'][0] ?? '原文の取得に失敗しました。',
-            ]);
+        $result = $checkDocumentSource($document);
 
-            return to_route('documents.edit', $document);
-        }
-
-        $hash = hash('sha256', $fetched['content']);
-
-        if ($hash === $document->adoptedSourceSnapshot?->content_hash) {
-            Inertia::flash('toast', [
-                'type' => 'success',
-                'message' => '原文に変更はありませんでした',
-            ]);
-
-            return to_route('documents.edit', $document);
-        }
-
-        $this->recordSourceSnapshot($document, $fetched['content'], $fetched['title']);
-
-        Inertia::flash('toast', [
-            'type' => 'success',
-            'message' => '原文の新しいバージョンを取得しました。差分を確認してください。',
-        ]);
+        Inertia::flash('toast', match ($result->status) {
+            SourceCheckStatus::Failed => ['type' => 'error', 'message' => $result->message],
+            SourceCheckStatus::Updated => ['type' => 'success', 'message' => '原文の新しいバージョンを取得しました。差分を確認してください。'],
+            default => ['type' => 'success', 'message' => '原文に変更はありませんでした'],
+        });
 
         return to_route('documents.edit', $document);
     }
@@ -202,54 +179,6 @@ class DocumentController extends Controller
         ]);
 
         return to_route('documents.edit', $document);
-    }
-
-    /**
-     * Fetch a source URL's content and pull out a title from its first
-     * Markdown h1, shared by the initial fetch (fetchSource) and later
-     * freshness checks (refreshSource).
-     *
-     * @return array{content: string, title: ?string}
-     */
-    private function fetchAndParseSource(string $url): array
-    {
-        $this->assertUrlIsFetchable($url, 'source_url');
-
-        try {
-            $content = Http::timeout(10)->get($url)->throw()->body();
-        } catch (\Throwable) {
-            throw ValidationException::withMessages([
-                'source_url' => '指定のURLから本文を取得できませんでした。',
-            ]);
-        }
-
-        $title = null;
-
-        if (preg_match('/^#\s+(.+)$/m', $content, $matches) === 1) {
-            $title = trim($matches[1]);
-        }
-
-        return ['content' => $content, 'title' => $title];
-    }
-
-    /**
-     * Record a new source snapshot for a document, optionally adopting it
-     * immediately (i.e. making it the version backing source_content).
-     */
-    private function recordSourceSnapshot(Document $document, string $content, ?string $title, bool $adopt = false): DocumentSourceSnapshot
-    {
-        $snapshot = $document->sourceSnapshots()->create([
-            'content' => $content,
-            'content_hash' => hash('sha256', $content),
-            'title' => $title,
-            'fetched_at' => now(),
-        ]);
-
-        if ($adopt) {
-            $document->update(['document_source_snapshot_id' => $snapshot->id]);
-        }
-
-        return $snapshot;
     }
 
     /**

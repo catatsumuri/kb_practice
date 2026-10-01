@@ -5,6 +5,7 @@ use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -488,4 +489,67 @@ test('名前空間の一覧はナビゲーションの順序で並ぶ', function
         ->assertInertia(fn (Assert $page) => $page
             ->where('documents.0.path', 'second')
             ->where('documents.1.path', 'first'));
+});
+
+test('所有者は一覧からソースの更新を確認でき、更新があった記事に印が付く', function () {
+    $namespace = DocumentNamespace::factory()->create();
+    $document = Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'intro',
+        'source_url' => 'https://example.com/intro.md',
+    ]);
+    $adopted = $document->recordSourceSnapshot('Old', null, adopt: true);
+
+    Http::fake(['*' => Http::response('New')]);
+
+    $this->actingAs($namespace->owner)
+        ->post(route('namespaces.check-sources', $namespace))
+        ->assertRedirect();
+
+    expect($document->sourceSnapshots()->count())->toBe(2)
+        ->and($document->fresh()->document_source_snapshot_id)->toBe($adopted->id);
+
+    $this->actingAs($namespace->owner)
+        ->get(route('namespaces.show', $namespace))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('documents.0.has_pending_source_update', true));
+});
+
+test('所有者以外はソースの更新確認を実行できない', function () {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => true]);
+    Http::fake();
+
+    $this->post(route('namespaces.check-sources', $namespace))->assertRedirect(route('login'));
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('namespaces.check-sources', $namespace))
+        ->assertForbidden();
+
+    Http::assertNothingSent();
+});
+
+test('原文のままの翻訳記事は未翻訳として一覧に渡され、本文は渡されない', function () {
+    $namespace = DocumentNamespace::factory()->create();
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'untranslated',
+        'content' => "# Intro\n\nHello",
+        'source_url' => 'https://example.com/a.md',
+        'source_content' => "# Intro\n\nHello",
+    ]);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'translated',
+        'content' => "# はじめに\n\nこんにちは",
+        'source_url' => 'https://example.com/b.md',
+        'source_content' => "# Intro\n\nHello",
+    ]);
+
+    $this->actingAs($namespace->owner)
+        ->get(route('namespaces.show', $namespace))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('documents', fn ($documents) => collect($documents)->pluck('is_untranslated', 'path')->all() == [
+                'untranslated' => true,
+                'translated' => false,
+            ] && collect($documents)->every(fn ($document) => ! isset($document['content'], $document['source_content']))));
 });

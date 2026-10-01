@@ -637,7 +637,7 @@ test('原文が変更されている場合は新しいスナップショット�
 
     $newSnapshot = DocumentSourceSnapshot::query()->latest('id')->first();
 
-    expect($newSnapshot->content)->toBe("# New Title\nNew content")
+    expect($newSnapshot->content)->toBe("# New Title {#new-title}\nNew content")
         ->and($newSnapshot->title)->toBe('New Title');
 
     $this->actingAs($user)

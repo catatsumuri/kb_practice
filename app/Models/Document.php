@@ -73,6 +73,26 @@ class Document extends Model
     }
 
     /**
+     * Record a new source snapshot, optionally adopting it immediately
+     * (i.e. making it the version backing source_content).
+     */
+    public function recordSourceSnapshot(string $content, ?string $title, bool $adopt = false): DocumentSourceSnapshot
+    {
+        $snapshot = $this->sourceSnapshots()->create([
+            'content' => $content,
+            'content_hash' => hash('sha256', $content),
+            'title' => $title,
+            'fetched_at' => now(),
+        ]);
+
+        if ($adopt) {
+            $this->update(['document_source_snapshot_id' => $snapshot->id]);
+        }
+
+        return $snapshot;
+    }
+
+    /**
      * Past versions of this document's title/content, recorded whenever an
      * edit or AI translation overwrites them.
      *
@@ -91,6 +111,16 @@ class Document extends Model
     public function translationSource(): string
     {
         return preg_replace('/\A(?:>[^\n]*\n|\n)+(?=#\s)/', '', (string) $this->source_content);
+    }
+
+    /**
+     * Whether this is a translation whose content is still the untouched
+     * source text, i.e. it has not been translated yet.
+     */
+    public function isUntranslated(): bool
+    {
+        return filled($this->source_content)
+            && in_array($this->content, [$this->source_content, $this->translationSource()], true);
     }
 
     /**
