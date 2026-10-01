@@ -101,6 +101,7 @@ test('the backup command fails for an unknown namespace', function () {
 
 test('a backup restores into an empty database with every field intact', function () {
     $namespace = typesafeNamespaceWithDocuments();
+    $namespace->update(['guest_redirect_path' => 'introduction']);
     $document = $namespace->documents()->where('path', 'introduction')->first();
     $adopted = DocumentSourceSnapshot::factory()->for($document)->create(['content' => 'adopted']);
     DocumentSourceSnapshot::factory()->for($document)->create(['content' => 'newer']);
@@ -123,6 +124,7 @@ test('a backup restores into an empty database with every field intact', functio
         ->and($restored->name)->toBe('TypeSafe AI Docs')
         ->and($restored->source_url)->toBe('https://docs.typesafe.ai')
         ->and($restored->is_public)->toBeTrue()
+        ->and($restored->guest_redirect_path)->toBe('introduction')
         ->and($restored->navigation)->toBe([['title' => 'Intro', 'pages' => ['introduction', 'sdk/python']]])
         ->and($restored->documents)->toHaveCount(2)
         ->and($introduction->title)->toBe('はじめに')

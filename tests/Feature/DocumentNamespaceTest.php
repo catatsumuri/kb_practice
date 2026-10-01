@@ -9,6 +9,108 @@ use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
+test('未ログインで公開名前空間のルートを開くと設定した公開記事へ転送する', function () {
+    $namespace = DocumentNamespace::factory()->create([
+        'is_public' => true,
+        'guest_redirect_path' => 'introduction/quickstart',
+    ]);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'introduction/quickstart',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->get(route('namespaces.show', $namespace))
+        ->assertRedirect(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'introduction/quickstart']));
+});
+
+test('ログイン中は転送先が設定されていても一覧を表示する', function (bool $isOwner) {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => true, 'guest_redirect_path' => 'intro']);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'intro',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+    $user = $isOwner ? $namespace->owner : User::factory()->create();
+
+    $this->actingAs($user)->get(route('namespaces.show', $namespace))
+        ->assertInertia(fn (Assert $page) => $page->component('namespaces/show')->has('documents', 1));
+})->with(['所有者' => true, '他のログインユーザー' => false]);
+
+test('転送先が未設定または公開記事でなくなった場合は一覧を表示する', function (?string $path, bool $createPrivateDocument) {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => true, 'guest_redirect_path' => $path]);
+    if ($createPrivateDocument) {
+        Document::factory()->for($namespace->owner)->create([
+            'document_namespace_id' => $namespace->id,
+            'path' => $path,
+            'visibility' => DocumentVisibility::Private,
+        ]);
+    }
+
+    $this->get(route('namespaces.show', $namespace))
+        ->assertInertia(fn (Assert $page) => $page->component('namespaces/show')->has('documents', 0));
+})->with(['未設定' => [null, false], '削除された記事' => ['deleted', false], '非公開化された記事' => ['private', true]]);
+
+test('非公開名前空間は転送先を設定しても未ログインには公開しない', function () {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => false, 'guest_redirect_path' => 'intro']);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'intro',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->get(route('namespaces.show', $namespace))->assertForbidden();
+});
+
+test('所有者は公開記事の転送先を設定し空欄で解除できる', function (?string $path) {
+    $namespace = DocumentNamespace::factory()->create(['guest_redirect_path' => 'intro']);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'intro',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->actingAs($namespace->owner)->put(route('namespaces.update', $namespace), [
+        'name' => $namespace->name,
+        'guest_redirect_path' => $path,
+    ])->assertRedirect(route('namespaces.show', $namespace));
+
+    expect($namespace->fresh()->guest_redirect_path)->toBe($path === '' ? null : $path);
+})->with(['設定' => 'intro', '解除' => '', 'nullで解除' => [null]]);
+
+test('他の名前空間の転送先と非公開記事と外部URLは設定できない', function (string $path) {
+    $namespace = DocumentNamespace::factory()->create();
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'private',
+        'visibility' => DocumentVisibility::Private,
+    ]);
+    $other = DocumentNamespace::factory()->create();
+    Document::factory()->for($other->owner)->create([
+        'document_namespace_id' => $other->id,
+        'path' => 'other',
+        'visibility' => DocumentVisibility::Public,
+    ]);
+
+    $this->actingAs($namespace->owner)->put(route('namespaces.update', $namespace), [
+        'name' => $namespace->name,
+        'guest_redirect_path' => $path,
+    ])->assertSessionHasErrors(['guest_redirect_path' => 'この名前空間の公開記事のパスを指定してください。']);
+
+    expect($namespace->fresh()->guest_redirect_path)->toBeNull();
+})->with(['private', 'other', 'missing', 'https://example.com']);
+
+test('所有者以外は転送先を変更できない', function () {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => true]);
+
+    $this->actingAs(User::factory()->create())->put(route('namespaces.update', $namespace), [
+        'name' => $namespace->name,
+        'guest_redirect_path' => 'intro',
+    ])->assertForbidden();
+
+    expect($namespace->fresh()->guest_redirect_path)->toBeNull();
+});
+
 test('未認証ユーザーはネームスペースからログイン画面へリダイレクトされる', function () {
     $this->get(route('namespaces.create'))->assertRedirect(route('login'));
 });

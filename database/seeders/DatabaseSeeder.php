@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Actions\BackupNamespace;
 use App\Actions\ListNamespaceBackups;
 use App\Actions\RestoreNamespace;
+use App\Enums\DocumentVisibility;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -48,7 +49,15 @@ class DatabaseSeeder extends Seeder
         }
 
         foreach ($backups as $backup) {
-            app(RestoreNamespace::class)(BackupNamespace::directory().'/'.$backup['filename'], $owner);
+            $result = app(RestoreNamespace::class)(BackupNamespace::directory().'/'.$backup['filename'], $owner);
+            $namespace = $result['namespace'];
+            $defaultPath = config('document-namespaces.seed_guest_redirect_paths.'.$namespace->slug);
+
+            if ($namespace->guest_redirect_path === null && is_string($defaultPath)
+                && $namespace->documents()->where('path', $defaultPath)->where('visibility', DocumentVisibility::Public)->exists()) {
+                $namespace->update(['guest_redirect_path' => $defaultPath]);
+            }
+
             $this->command->info('Restored '.$backup['namespace_slug'].' from '.$backup['filename'].'.');
         }
     }

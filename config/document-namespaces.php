@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'seed_guest_redirect_paths' => [
+        'typesafe' => 'introduction',
+    ],
+
     /*
      * Top-level route segments that a namespace slug must never collide
      * with, since namespace URLs live under /documents/{namespace}/...

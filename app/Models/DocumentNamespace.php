@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
-#[Fillable(['slug', 'name', 'source_url', 'navigation', 'is_public'])]
+#[Fillable(['slug', 'name', 'source_url', 'navigation', 'is_public', 'guest_redirect_path'])]
 class DocumentNamespace extends Model
 {
     /** @use HasFactory<DocumentNamespaceFactory> */

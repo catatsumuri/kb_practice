@@ -18,9 +18,20 @@ class DocumentNamespaceController extends Controller
      * documents in the namespace; anyone else (including guests, for a
      * public namespace) only sees the namespace's public documents.
      */
-    public function show(Request $request, DocumentNamespace $namespace): Response
+    public function show(Request $request, DocumentNamespace $namespace): Response|RedirectResponse
     {
         Gate::authorize('view', $namespace);
+
+        if ($request->user() === null && filled($namespace->guest_redirect_path)
+            && $namespace->documents()
+                ->where('path', $namespace->guest_redirect_path)
+                ->where('visibility', DocumentVisibility::Public)
+                ->exists()) {
+            return to_route('documents.show-by-path', [
+                'namespace' => $namespace,
+                'path' => $namespace->guest_redirect_path,
+            ]);
+        }
 
         $isOwner = $request->user()?->id === $namespace->owner_user_id;
 
@@ -112,6 +123,18 @@ class DocumentNamespaceController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'source_url' => ['nullable', 'url:http,https', 'max:2048'],
             'is_public' => ['sometimes', 'boolean'],
+            'guest_redirect_path' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::notIn(config('document-namespaces.reserved_paths')),
+                Rule::exists('documents', 'path')
+                    ->where('document_namespace_id', $namespace->id)
+                    ->where('visibility', DocumentVisibility::Public->value),
+            ],
+        ], [
+            'guest_redirect_path.exists' => 'この名前空間の公開記事のパスを指定してください。',
+            'guest_redirect_path.not_in' => 'このパスは転送先に指定できません。',
         ]);
 
         $validated['is_public'] = $request->boolean('is_public');

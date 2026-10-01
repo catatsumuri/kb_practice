@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\BackupNamespace;
+use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
 use App\Models\User;
@@ -33,6 +34,7 @@ test('the seeder restores the typesafe namespace from its backup, owned by the f
         'document_namespace_id' => $source->id,
         'path' => 'introduction',
         'title' => 'はじめに',
+        'visibility' => DocumentVisibility::Public,
     ]);
     app(BackupNamespace::class)($source, BackupNamespace::directory().'/typesafe.zip');
     $source->owner->delete();
@@ -42,9 +44,47 @@ test('the seeder restores the typesafe namespace from its backup, owned by the f
     $namespace = DocumentNamespace::where('slug', 'typesafe')->firstOrFail();
 
     expect($namespace->owner->email)->toBe('test@example.com')
+        ->and($namespace->guest_redirect_path)->toBe('introduction')
         ->and($namespace->navigation)->toBe([['title' => 'Start', 'pages' => ['introduction']]])
         ->and($namespace->documents()->pluck('title', 'path')->all())->toBe(['introduction' => 'はじめに']);
 });
+
+test('seed defaults do not overwrite a redirect saved in the backup', function () {
+    $source = DocumentNamespace::factory()->create([
+        'slug' => 'typesafe',
+        'guest_redirect_path' => 'guide',
+    ]);
+    foreach (['guide', 'introduction'] as $path) {
+        Document::factory()->for($source->owner)->create([
+            'document_namespace_id' => $source->id,
+            'path' => $path,
+            'visibility' => DocumentVisibility::Public,
+        ]);
+    }
+    app(BackupNamespace::class)($source, BackupNamespace::directory().'/typesafe.zip');
+    $source->owner->delete();
+
+    $this->seed(DatabaseSeeder::class);
+
+    expect(DocumentNamespace::where('slug', 'typesafe')->sole()->guest_redirect_path)->toBe('guide');
+});
+
+test('seed defaults do not point at missing or private articles', function (bool $createPrivateDocument) {
+    $source = DocumentNamespace::factory()->create(['slug' => 'typesafe']);
+    if ($createPrivateDocument) {
+        Document::factory()->for($source->owner)->create([
+            'document_namespace_id' => $source->id,
+            'path' => 'introduction',
+            'visibility' => DocumentVisibility::Private,
+        ]);
+    }
+    app(BackupNamespace::class)($source, BackupNamespace::directory().'/typesafe.zip');
+    $source->owner->delete();
+
+    $this->seed(DatabaseSeeder::class);
+
+    expect(DocumentNamespace::where('slug', 'typesafe')->sole()->guest_redirect_path)->toBeNull();
+})->with(['missing' => false, 'private' => true]);
 
 test('the seeder restores only the latest archive for every namespace regardless of filename or modification time', function () {
     $owner = User::factory()->create();

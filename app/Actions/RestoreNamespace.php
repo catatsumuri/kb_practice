@@ -59,6 +59,7 @@ class RestoreNamespace
                     'source_url' => $namespaceData['source_url'] ?? null,
                     'is_public' => (bool) ($namespaceData['is_public'] ?? false),
                     'navigation' => is_array($namespaceData['navigation'] ?? null) ? $namespaceData['navigation'] : null,
+                    'guest_redirect_path' => is_string($namespaceData['guest_redirect_path'] ?? null) ? $namespaceData['guest_redirect_path'] : null,
                 ];
 
                 $created = $namespace === null;

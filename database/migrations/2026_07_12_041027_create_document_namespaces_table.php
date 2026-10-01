@@ -17,7 +17,9 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('name');
             $table->string('source_url')->nullable();
+            $table->json('navigation')->nullable();
             $table->boolean('is_public')->default(false);
+            $table->string('guest_redirect_path')->nullable();
             $table->timestamps();
         });
     }

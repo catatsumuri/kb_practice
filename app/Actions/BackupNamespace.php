@@ -79,6 +79,7 @@ class BackupNamespace
             'source_url' => $namespace->source_url,
             'is_public' => $namespace->is_public,
             'navigation' => $namespace->navigation,
+            'guest_redirect_path' => $namespace->guest_redirect_path,
         ]));
 
         $documents = $namespace->documents()

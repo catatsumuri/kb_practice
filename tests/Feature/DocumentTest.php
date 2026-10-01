@@ -858,6 +858,6 @@ test('ダッシュボードは名前空間のslugとpathを渡す', function () 
     $this->actingAs(User::factory()->create())
         ->get(route('dashboard'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('documents.0.path', 'introduction')
-            ->where('documents.0.namespace.slug', 'typesafe'));
+            ->where('recentDocuments.0.path', 'introduction')
+            ->where('recentDocuments.0.namespace.slug', 'typesafe'));
 });

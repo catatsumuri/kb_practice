@@ -5,6 +5,7 @@ export type DocumentNamespace = {
     name: string;
     source_url: string | null;
     is_public: boolean;
+    guest_redirect_path: string | null;
     created_at: string;
 };
 

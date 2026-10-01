@@ -12,7 +12,7 @@ import type { DocumentNamespace } from '@/types';
 type EditNamespaceProps = {
     namespace: Pick<
         DocumentNamespace,
-        'slug' | 'name' | 'source_url' | 'is_public'
+        'slug' | 'name' | 'source_url' | 'is_public' | 'guest_redirect_path'
     >;
 };
 
@@ -32,7 +32,7 @@ export default function EditNamespace({ namespace }: EditNamespaceProps) {
             <main className="p-4">
                 <NamespaceForm
                     title={`「${namespace.name}」を編集`}
-                    description="表示名・元サイトURL・公開範囲を編集できます。"
+                    description="表示名・元サイトURL・公開範囲・未ログイン時の転送先を編集できます。"
                     form={update.form(namespace.slug)}
                     cancelHref={show(namespace.slug)}
                     submitLabel="更新"

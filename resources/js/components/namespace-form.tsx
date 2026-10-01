@@ -23,6 +23,7 @@ type NamespaceFormValues = {
     name: string;
     source_url: string | null;
     is_public: boolean;
+    guest_redirect_path: string | null;
 };
 
 type NamespaceFormProps = {
@@ -125,6 +126,37 @@ export function NamespaceForm({
                                 </p>
                                 <InputError message={errors.is_public} />
                             </div>
+
+                            {editingSlug && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="guest_redirect_path">
+                                        未ログイン時の転送先（任意）
+                                    </Label>
+                                    <Input
+                                        id="guest_redirect_path"
+                                        name="guest_redirect_path"
+                                        defaultValue={
+                                            defaultValues?.guest_redirect_path ??
+                                            ''
+                                        }
+                                        placeholder="introduction/quickstart"
+                                        maxLength={255}
+                                        aria-invalid={Boolean(
+                                            errors.guest_redirect_path,
+                                        )}
+                                        aria-describedby="guest-redirect-help"
+                                    />
+                                    <p
+                                        id="guest-redirect-help"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        この名前空間の公開記事のパスを入力してください。未ログインで名前空間のルートを開くとその記事へ転送します。空欄なら一覧を表示します。ログイン中は常に一覧を表示します。
+                                    </p>
+                                    <InputError
+                                        message={errors.guest_redirect_path}
+                                    />
+                                </div>
+                            )}
 
                             <div className="flex items-center justify-end gap-4">
                                 <Button variant="outline" asChild>
