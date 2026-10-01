@@ -548,6 +548,7 @@ test('原文のままの翻訳記事は未翻訳として一覧に渡され、�
     $this->actingAs($namespace->owner)
         ->get(route('namespaces.show', $namespace))
         ->assertInertia(fn (Assert $page) => $page
+            ->where('documents', fn ($documents) => collect($documents)->firstWhere('path', 'translated')['content_length'] === mb_strlen("# はじめに\n\nこんにちは"))
             ->where('documents', fn ($documents) => collect($documents)->pluck('is_untranslated', 'path')->all() == [
                 'untranslated' => true,
                 'translated' => false,

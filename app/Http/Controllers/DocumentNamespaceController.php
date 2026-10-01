@@ -60,6 +60,7 @@ class DocumentNamespaceController extends Controller
                             && $document->latest_source_snapshot_id !== $document->document_source_snapshot_id,
                     );
                     $document->setAttribute('is_untranslated', $document->isUntranslated());
+                    $document->setAttribute('content_length', mb_strlen($document->content));
                     $document->makeHidden(['content', 'source_content']);
                 })
                 ->values(),

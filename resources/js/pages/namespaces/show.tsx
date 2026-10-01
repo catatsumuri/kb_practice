@@ -35,6 +35,7 @@ type ShowNamespaceProps = {
         adopted_source_snapshot: { fetched_at: string } | null;
         has_pending_source_update: boolean;
         is_untranslated: boolean;
+        content_length: number;
     })[];
 };
 
@@ -90,8 +91,8 @@ export default function ShowNamespace({
         );
     }
     const rowGrid = isOwner
-        ? 'grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_10rem_10rem]'
-        : 'grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_10rem_10rem]';
+        ? 'grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_6rem_8rem_10rem_10rem_5rem]'
+        : 'grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_8rem_10rem_10rem_5rem]';
 
     // Non-owners (including guests, i.e. "public mode") reach this page
     // directly, so the namespace itself is the breadcrumb root regardless
@@ -214,6 +215,9 @@ export default function ShowNamespace({
                             <span className="hidden sm:inline">
                                 ソース更新日
                             </span>
+                            <span className="hidden text-right sm:inline">
+                                文字数
+                            </span>
                         </div>
                         <ul className="divide-y">
                             {documentList.map((document) => (
@@ -297,6 +301,9 @@ export default function ShowNamespace({
                                             ) : (
                                                 '—'
                                             )}
+                                        </span>
+                                        <span className="hidden text-right text-muted-foreground tabular-nums sm:inline">
+                                            {document.content_length.toLocaleString()}
                                         </span>
                                     </Link>
                                 </li>
