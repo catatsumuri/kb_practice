@@ -282,7 +282,7 @@ class DocumentController extends Controller
     {
         Gate::authorize('update', $document);
 
-        $document->load(['adoptedSourceSnapshot', 'namespace:id,slug']);
+        $document->load(['adoptedSourceSnapshot', 'namespace:id,slug,name']);
 
         $latestSnapshot = $document->sourceSnapshots()->latest('fetched_at')->first();
         $pendingSnapshot = $latestSnapshot && $latestSnapshot->id !== $document->document_source_snapshot_id

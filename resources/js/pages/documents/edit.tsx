@@ -5,6 +5,7 @@ import {
     translate,
     update,
 } from '@/actions/App/Http/Controllers/DocumentController';
+import { show as showNamespace } from '@/actions/App/Http/Controllers/DocumentNamespaceController';
 import { DocumentForm } from '@/components/document-form';
 import { DocumentRevisions } from '@/components/document-revisions';
 import { SourceFreshness } from '@/components/source-freshness';
@@ -29,7 +30,7 @@ type EditDocumentProps = {
         | 'source_content'
     > & {
         adopted_source_snapshot: DocumentSourceSnapshot | null;
-        namespace: { slug: string } | null;
+        namespace: { slug: string; name: string } | null;
     };
     pendingSnapshot: DocumentSourceSnapshot | null;
     revisions: DocumentRevision[];
@@ -46,6 +47,14 @@ export default function EditDocument({
                 title: 'ドキュメント',
                 href: index(),
             },
+            ...(document.namespace
+                ? [
+                      {
+                          title: document.namespace.name,
+                          href: showNamespace(document.namespace.slug),
+                      },
+                  ]
+                : []),
             {
                 title: document.title,
                 href: documentHref(document),

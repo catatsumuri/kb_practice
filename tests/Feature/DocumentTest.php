@@ -511,6 +511,25 @@ test('パス指定URLでも他のユーザーの非公開ドキュメントは�
         ->assertForbidden();
 });
 
+test('記事編集画面にパンくず用の名前空間名とスラッグを渡す', function () {
+    $namespace = DocumentNamespace::factory()->create([
+        'name' => 'Laravel AI',
+        'slug' => 'laravel-ai',
+    ]);
+    $document = Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'sdk',
+    ]);
+
+    $this->actingAs($namespace->owner)
+        ->get(route('documents.edit', $document))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('documents/edit')
+            ->where('document.namespace.name', 'Laravel AI')
+            ->where('document.namespace.slug', 'laravel-ai')
+            ->where('document.path', 'sdk'));
+});
+
 test('ゲストへのサイドバーナビゲーションには同じネームスペースの公開ドキュメントのみ並ぶ', function () {
     $owner = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $owner->id, 'is_public' => true]);

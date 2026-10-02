@@ -157,7 +157,7 @@ test('公開を指定してネームスペースを作成できる', function ()
         ->post(route('namespaces.store'), [
             'slug' => 'typesafe',
             'name' => 'Typesafe Docs',
-            'is_public' => true,
+            'is_public' => '1',
         ])
         ->assertRedirect(route('documents.index'));
 
@@ -329,6 +329,27 @@ test('所有者はネームスペースの公開設定を編集できる', funct
         ->is_public->toBeTrue();
 });
 
+test('フォームの公開チェック状態でネームスペースを保存できる', function (bool $wasPublic, bool $isChecked) {
+    $namespace = DocumentNamespace::factory()->create(['is_public' => $wasPublic]);
+    $payload = ['name' => $namespace->name];
+
+    if ($isChecked) {
+        $payload['is_public'] = '1';
+    }
+
+    $this->actingAs($namespace->owner)
+        ->put(route('namespaces.update', $namespace), $payload)
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    expect($namespace->fresh()->is_public)->toBe($isChecked);
+})->with([
+    '公開のまま保存' => [true, true],
+    '非公開のまま保存' => [false, false],
+    '公開から非公開に変更' => [true, false],
+    '非公開から公開に変更' => [false, true],
+]);
+
 test('ネームスペースのスラッグは編集で変更されない', function () {
     $user = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create([
@@ -372,7 +393,7 @@ test('未認証ユーザーはネームスペースの編集画面からログ�
     $this->get(route('namespaces.edit', $namespace))->assertRedirect(route('login'));
 });
 
-test('従来のナビゲーション定義に沿ってツリー化し、未掲載の文書は末尾の無題ノードに入る', function () {
+test('ナビゲーション定義にある文書だけをツリー化する', function () {
     $namespace = DocumentNamespace::factory()->create([
         'navigation' => [
             ['title' => 'Start', 'pages' => ['b', 'missing', 'a']],
@@ -388,24 +409,27 @@ test('従来のナビゲーション定義に沿ってツリー化し、未掲�
 
     $tree = $namespace->navigationTree($documents);
 
-    expect($tree)->toHaveCount(2)
+    expect($tree)->toHaveCount(1)
         ->and($tree[0]['title'])->toBe('Start')
         ->and(collect($tree[0]['children'])->pluck('document.path')->all())->toBe(['b', 'a'])
-        ->and($tree[1]['title'])->toBeNull()
-        ->and(collect($tree[1]['children'])->pluck('document.path')->all())->toBe(['z']);
+        ->and($namespace->navigationDocuments($documents)->pluck('path')->all())->toBe(['b', 'a', 'z']);
 });
 
-test('ナビゲーションがない名前空間は全ての文書を1つの無題ノードにする', function () {
-    $namespace = DocumentNamespace::factory()->create(['navigation' => null]);
+test('表示できるメニュー項目がなければナビゲーションは空になる', function (?array $navigation) {
+    $namespace = DocumentNamespace::factory()->create(['navigation' => $navigation]);
     $documents = Document::factory()->count(2)->for(User::factory()->create())->create([
         'document_namespace_id' => $namespace->id,
     ]);
 
     $tree = $namespace->navigationTree($documents);
 
-    expect($tree)->toHaveCount(1)->and($tree[0]['title'])->toBeNull()
-        ->and($tree[0]['children'])->toHaveCount(2);
-});
+    expect($tree)->toBe([])
+        ->and($namespace->navigationDocuments($documents)->pluck('id')->all())->toBe($documents->modelKeys());
+})->with([
+    '未設定' => [null],
+    '空のメニュー' => [[]],
+    '存在しない記事のみ' => [['missing']],
+]);
 
 test('ナビゲーションはリンク付き親ノード、入れ子、ラベルを再帰的に解決する', function () {
     $namespace = DocumentNamespace::factory()->create([
@@ -454,7 +478,7 @@ test('文書ページはサイドバー用にナビゲーションのツリー�
         'is_public' => true,
         'navigation' => [['title' => 'Start', 'pages' => ['second', 'first']]],
     ]);
-    foreach (['first', 'second'] as $path) {
+    foreach (['first', 'second', 'unlisted'] as $path) {
         Document::factory()->for($user)->create([
             'document_namespace_id' => $namespace->id,
             'path' => $path,
@@ -465,19 +489,22 @@ test('文書ページはサイドバー用にナビゲーションのツリー�
 
     $this->get(route('documents.show-by-path', ['namespace' => $namespace, 'path' => 'first']))
         ->assertInertia(fn (Assert $page) => $page
+            ->has('namespaceDocuments', 3)
+            ->has('namespaceNavigation', 1)
+            ->has('namespaceNavigation.0.children', 2)
             ->where('namespaceNavigation.0.title', 'Start')
             ->where('namespaceNavigation.0.children.0.document.path', 'second')
             ->where('namespaceNavigation.0.children.1.document.path', 'first'));
 });
 
-test('名前空間の一覧はナビゲーションの順序で並ぶ', function () {
+test('名前空間の一覧はナビゲーションの順序で並び未掲載の記事も表示する', function () {
     $user = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create([
         'owner_user_id' => $user->id,
         'is_public' => true,
         'navigation' => [['title' => 'Start', 'pages' => ['second', 'first']]],
     ]);
-    foreach (['first', 'second'] as $path) {
+    foreach (['first', 'second', 'unlisted'] as $path) {
         Document::factory()->for($user)->create([
             'document_namespace_id' => $namespace->id,
             'path' => $path,
@@ -488,7 +515,8 @@ test('名前空間の一覧はナビゲーションの順序で並ぶ', function
     $this->get(route('namespaces.show', $namespace))
         ->assertInertia(fn (Assert $page) => $page
             ->where('documents.0.path', 'second')
-            ->where('documents.1.path', 'first'));
+            ->where('documents.1.path', 'first')
+            ->where('documents.2.path', 'unlisted'));
 });
 
 test('所有者は一覧からソースの更新を確認でき、更新があった記事に印が付く', function () {
@@ -561,4 +589,97 @@ test('原文のまま、または本文が空の翻訳記事は未翻訳とし�
                 'translated' => false,
                 'empty' => true,
             ] && collect($documents)->every(fn ($document) => ! isset($document['content'], $document['source_content']))));
+});
+
+test('所有者はナビゲーションをJSONで更新し空欄で解除できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    $navigation = [
+        'intro',
+        ['title' => 'クックブック', 'page' => 'cookbooks', 'pages' => [
+            ['page' => 'cookbooks/a', 'label' => '初級'],
+        ]],
+    ];
+
+    $this->actingAs($user)
+        ->put(route('namespaces.update', $namespace), [
+            'name' => $namespace->name,
+            'navigation' => json_encode($navigation),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($namespace->fresh()->navigation)->toBe($navigation);
+
+    $this->actingAs($user)
+        ->put(route('namespaces.update', $namespace), [
+            'name' => $namespace->name,
+            'navigation' => '',
+        ]);
+
+    expect($namespace->fresh()->navigation)->toBeNull();
+});
+
+test('ナビゲーションを送らない更新では既存の定義を保持する', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create([
+        'owner_user_id' => $user->id,
+        'navigation' => ['intro'],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('namespaces.update', $namespace), ['name' => '改名']);
+
+    expect($namespace->fresh()->navigation)->toBe(['intro']);
+});
+
+test('不正なナビゲーションは保存できない', function (string $navigation) {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create([
+        'owner_user_id' => $user->id,
+        'navigation' => ['intro'],
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('namespaces.update', $namespace), [
+            'name' => $namespace->name,
+            'navigation' => $navigation,
+        ])
+        ->assertSessionHasErrors('navigation');
+
+    expect($namespace->fresh()->navigation)->toBe(['intro']);
+})->with([
+    '壊れたJSON' => '[{"title": ',
+    '配列でない' => '{"title": "a"}',
+    '未対応のキー' => '[{"page": "a", "collapsed": true}]',
+    'ラベルが文字列でない' => '[{"page": "a", "label": 1}]',
+    'pagesが配列でない' => '[{"title": "a", "pages": "b"}]',
+    '空のパス' => '[""]',
+    '入れ子が深すぎる' => '[{"pages":[{"pages":[{"pages":[{"pages":[{"pages":[{"pages":["a"]}]}]}]}]}]}]',
+]);
+
+test('所有者以外はナビゲーションを変更できない', function () {
+    $namespace = DocumentNamespace::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->put(route('namespaces.update', $namespace), [
+            'name' => $namespace->name,
+            'navigation' => '["intro"]',
+        ])
+        ->assertForbidden();
+
+    expect($namespace->fresh()->navigation)->toBeNull();
+});
+
+test('編集画面にはナビゲーションで選べる記事のパスが渡される', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+    Document::factory()->create(['document_namespace_id' => $namespace->id, 'user_id' => $user->id, 'path' => 'intro', 'title' => 'はじめに']);
+    Document::factory()->create(['document_namespace_id' => $namespace->id, 'user_id' => $user->id, 'path' => null]);
+
+    $this->actingAs($user)
+        ->get(route('namespaces.edit', $namespace))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('namespaces/edit')
+            ->has('navigationDocuments', 1)
+            ->where('navigationDocuments.0.path', 'intro'));
 });

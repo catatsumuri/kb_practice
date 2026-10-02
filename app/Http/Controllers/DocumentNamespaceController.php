@@ -7,6 +7,7 @@ use App\Enums\DocumentVisibility;
 use App\Enums\SourceCheckStatus;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Rules\NavigationDefinition;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -149,6 +150,10 @@ class DocumentNamespaceController extends Controller
 
         return Inertia::render('namespaces/edit', [
             'namespace' => $namespace,
+            'navigationDocuments' => $namespace->documents()
+                ->whereNotNull('path')
+                ->orderBy('path')
+                ->get(['title', 'path']),
         ]);
     }
 
@@ -164,6 +169,7 @@ class DocumentNamespaceController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'source_url' => ['nullable', 'url:http,https', 'max:2048'],
             'is_public' => ['sometimes', 'boolean'],
+            'navigation' => ['nullable', 'string', new NavigationDefinition],
             'guest_redirect_path' => [
                 'nullable',
                 'string',
@@ -179,6 +185,12 @@ class DocumentNamespaceController extends Controller
         ]);
 
         $validated['is_public'] = $request->boolean('is_public');
+
+        if (array_key_exists('navigation', $validated)) {
+            $validated['navigation'] = filled($validated['navigation'])
+                ? json_decode($validated['navigation'], true)
+                : null;
+        }
 
         $namespace->update($validated);
 

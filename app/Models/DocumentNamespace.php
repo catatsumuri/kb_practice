@@ -50,7 +50,7 @@ class DocumentNamespace extends Model
      * Arrange documents into the namespace's navigation tree. Navigation
      * entries may be document paths or nested nodes with optional page,
      * title, label, and pages values. Missing pages and empty nodes are
-     * skipped, while unlisted documents are appended in an untitled node.
+     * skipped. Only explicitly configured documents appear in the tree.
      *
      * @param  Collection<int, Document>  $documents
      * @return list<array{title: ?string, document: ?Document, label: ?string, children: array}>
@@ -58,33 +58,21 @@ class DocumentNamespace extends Model
     public function navigationTree(Collection $documents): array
     {
         $documentsByPath = $documents->whereNotNull('path')->keyBy('path');
-        $listedPaths = [];
         $tree = [];
 
         foreach ($this->navigation ?? [] as $entry) {
-            $node = $this->resolveNavigationEntry($entry, $documentsByPath, $listedPaths);
+            $node = $this->resolveNavigationEntry($entry, $documentsByPath);
 
             if ($node !== null) {
                 $tree[] = $node;
             }
         }
 
-        $unlisted = $documents->reject(fn (Document $document) => in_array($document->path, $listedPaths, true));
-
-        if ($unlisted->isNotEmpty()) {
-            $tree[] = [
-                'title' => null,
-                'document' => null,
-                'label' => null,
-                'children' => $unlisted->map(fn (Document $document) => $this->documentNavigationNode($document))->values()->all(),
-            ];
-        }
-
         return $tree;
     }
 
     /**
-     * Return documents in their configured navigation order.
+     * Return all documents, placing configured navigation entries first.
      *
      * @param  Collection<int, Document>  $documents
      * @return Collection<int, Document>
@@ -100,16 +88,17 @@ class DocumentNamespace extends Model
             })->all();
         };
 
-        return collect($flatten($this->navigationTree($documents)));
+        $ordered = collect($flatten($this->navigationTree($documents)));
+
+        return $ordered->concat($documents->whereNotIn('id', $ordered->pluck('id')))->values();
     }
 
     /**
      * @param  string|array<string, mixed>  $entry
      * @param  Collection<string, Document>  $documentsByPath
-     * @param  list<string>  $listedPaths
      * @return array{title: ?string, document: ?Document, label: ?string, children: array}|null
      */
-    private function resolveNavigationEntry(string|array $entry, Collection $documentsByPath, array &$listedPaths): ?array
+    private function resolveNavigationEntry(string|array $entry, Collection $documentsByPath): ?array
     {
         if (is_string($entry)) {
             $document = $documentsByPath->get($entry);
@@ -118,18 +107,12 @@ class DocumentNamespace extends Model
                 return null;
             }
 
-            $listedPaths[] = $entry;
-
             return $this->documentNavigationNode($document);
         }
 
         $document = isset($entry['page']) && is_string($entry['page'])
             ? $documentsByPath->get($entry['page'])
             : null;
-
-        if ($document) {
-            $listedPaths[] = $document->path;
-        }
 
         $children = [];
 
@@ -138,7 +121,7 @@ class DocumentNamespace extends Model
                 continue;
             }
 
-            $childNode = $this->resolveNavigationEntry($child, $documentsByPath, $listedPaths);
+            $childNode = $this->resolveNavigationEntry($child, $documentsByPath);
 
             if ($childNode !== null) {
                 $children[] = $childNode;

@@ -69,7 +69,7 @@ export default function ShowDocument({
     const namespace = document.namespace;
     const [showSource, setShowSource] = useState(false);
     const hasSource = Boolean(document.source_content);
-    const hasNamespaceNav = Boolean(namespace) && namespaceDocuments.length > 0;
+    const hasNamespaceNav = Boolean(namespace) && namespaceNavigation.length > 0;
     const documentReader = hasNamespaceNav;
     const [showNav, setShowNav] = usePersistedBoolean(
         'documents.showNav',

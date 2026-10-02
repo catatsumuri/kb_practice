@@ -10,13 +10,22 @@ import { NamespaceForm } from '@/components/namespace-form';
 import type { DocumentNamespace } from '@/types';
 
 type EditNamespaceProps = {
+    navigationDocuments: { title: string; path: string }[];
     namespace: Pick<
         DocumentNamespace,
-        'slug' | 'name' | 'source_url' | 'is_public' | 'guest_redirect_path'
+        | 'slug'
+        | 'name'
+        | 'source_url'
+        | 'is_public'
+        | 'guest_redirect_path'
+        | 'navigation'
     >;
 };
 
-export default function EditNamespace({ namespace }: EditNamespaceProps) {
+export default function EditNamespace({
+    namespace,
+    navigationDocuments,
+}: EditNamespaceProps) {
     setLayoutProps({
         breadcrumbs: [
             { title: 'ドキュメント', href: index() },
@@ -32,11 +41,17 @@ export default function EditNamespace({ namespace }: EditNamespaceProps) {
             <main className="p-4">
                 <NamespaceForm
                     title={`「${namespace.name}」を編集`}
-                    description="表示名・元サイトURL・公開範囲・未ログイン時の転送先を編集できます。"
+                    description="表示名・元サイトURL・公開範囲・未ログイン時の転送先・左バーのナビゲーションを編集できます。"
                     form={update.form(namespace.slug)}
                     cancelHref={show(namespace.slug)}
                     submitLabel="更新"
-                    defaultValues={namespace}
+                    navigationDocuments={navigationDocuments}
+                    defaultValues={{
+                        ...namespace,
+                        navigation: namespace.navigation
+                            ? JSON.stringify(namespace.navigation, null, 2)
+                            : '',
+                    }}
                 />
             </main>
         </>
