@@ -6,8 +6,10 @@ use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use App\Models\UploadedImage;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use JsonException;
 use RuntimeException;
 use ZipArchive;
@@ -74,10 +76,46 @@ class RestoreNamespace
                     $documents++;
                 }
 
+                $this->restoreImages($zip);
+
                 return ['namespace' => $namespace, 'created' => $created, 'documents' => $documents];
             });
         } finally {
             $zip->close();
+        }
+    }
+
+    /**
+     * Write the archive's images back to the public disk. Images that are
+     * already stored are left untouched.
+     */
+    private function restoreImages(ZipArchive $zip): void
+    {
+        $disk = Storage::disk('public');
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+
+            if (! str_starts_with($name, BackupNamespace::IMAGES_DIRECTORY) || str_ends_with($name, '/')) {
+                continue;
+            }
+
+            $path = substr($name, strlen(BackupNamespace::IMAGES_DIRECTORY));
+            $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+            if (! in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) || $disk->exists($path)) {
+                continue;
+            }
+
+            $contents = $zip->getFromIndex($index);
+
+            if ($contents === false) {
+                continue;
+            }
+
+            $disk->put($path, $contents);
+
+            UploadedImage::query()->firstOrCreate(['path' => $path, 'disk' => 'public']);
         }
     }
 

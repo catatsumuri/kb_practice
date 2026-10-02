@@ -1,4 +1,4 @@
-import { Form, Link, router } from '@inertiajs/react';
+import { Form, Link, router, useHttp } from '@inertiajs/react';
 import {
     Download,
     Languages,
@@ -6,9 +6,10 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
+import type { ClipboardEvent, ComponentProps, DragEvent } from 'react';
 import { toast } from 'sonner';
 import { fetchSource } from '@/actions/App/Http/Controllers/DocumentController';
+import { store as storeImage } from '@/actions/App/Http/Controllers/ImageController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -105,6 +106,11 @@ export function DocumentForm({
     );
     const [contentHeight, setContentHeight] = useState<number | null>(null);
     const [path, setPath] = useState(defaultValues?.path ?? '');
+    const [imageError, setImageError] = useState<string | null>(null);
+    const imageHttp = useHttp<{ image: File | null }, { url: string }>({
+        image: null,
+    });
+    const uploading = imageHttp.processing;
 
     // The content textarea auto-grows to fit whatever the user is typing
     // (field-sizing: content), so its height isn't known up front. Mirror
@@ -160,6 +166,65 @@ export function DocumentForm({
             contentRef.current.value = defaultValues?.content ?? '';
         }
     }, [defaultValues?.content]);
+
+    // Upload an image and insert its Markdown at the caret. The upload goes
+    // over XHR rather than an Inertia visit so the unsaved form survives.
+    function uploadImage(file: File) {
+        const textarea = contentRef.current;
+
+        if (!textarea || !file.type.startsWith('image/') || uploading) {
+            return;
+        }
+
+        const { selectionStart, selectionEnd } = textarea;
+
+        setImageError(null);
+        imageHttp.transform(() => ({ image: file }));
+        imageHttp
+            .submit(storeImage(), {
+                onError: (errors) =>
+                    setImageError(
+                        errors.image ?? '画像のアップロードに失敗しました。',
+                    ),
+            })
+            .then(({ url }) => {
+                textarea.setRangeText(
+                    `![image](${url})`,
+                    selectionStart,
+                    selectionEnd,
+                    'end',
+                );
+                textarea.focus();
+            })
+            .catch(() => {
+                setImageError(
+                    (current) =>
+                        current ?? '画像のアップロードに失敗しました。',
+                );
+            });
+    }
+
+    function handleContentDrop(event: DragEvent<HTMLTextAreaElement>) {
+        const file = Array.from(event.dataTransfer.files).find((candidate) =>
+            candidate.type.startsWith('image/'),
+        );
+
+        if (file) {
+            event.preventDefault();
+            uploadImage(file);
+        }
+    }
+
+    function handleContentPaste(event: ClipboardEvent<HTMLTextAreaElement>) {
+        const file = Array.from(event.clipboardData.items)
+            .find((item) => item.type.startsWith('image/'))
+            ?.getAsFile();
+
+        if (file) {
+            event.preventDefault();
+            uploadImage(file);
+        }
+    }
 
     function handleFetchSource() {
         const url = sourceUrl.trim();
@@ -530,6 +595,8 @@ export function DocumentForm({
                                         defaultValue={defaultValues?.content}
                                         aria-describedby="content-help"
                                         aria-invalid={Boolean(errors.content)}
+                                        onDrop={handleContentDrop}
+                                        onPaste={handleContentPaste}
                                         className="min-h-80 resize-y font-mono leading-6"
                                         required
                                     />
@@ -551,9 +618,11 @@ export function DocumentForm({
                                     id="content-help"
                                     className="text-xs text-muted-foreground"
                                 >
-                                    見出し、リスト、リンク、表、タスクリストなどのMarkdown記法を使用できます。
+                                    見出し、リスト、リンク、表、タスクリストなどのMarkdown記法を使用できます。画像はドラッグ&ドロップまたはペーストでアップロードできます。
+                                    {uploading && ' 画像をアップロード中…'}
                                 </p>
                                 <InputError message={errors.content} />
+                                <InputError message={imageError ?? undefined} />
                             </div>
 
                             <div className="flex items-center justify-end gap-4">

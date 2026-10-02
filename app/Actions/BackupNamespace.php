@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\Document;
 use App\Models\DocumentNamespace;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
 
@@ -26,6 +27,9 @@ class BackupNamespace
     /** Directory holding each document's source Markdown, as "source/{path}.md". */
     public const SOURCE_DIRECTORY = 'source/';
 
+    /** Directory holding the images referenced by documents, as "images/{path}". */
+    public const IMAGES_DIRECTORY = 'images/';
+
     /** Directory holding each document's metadata, as "meta/{path}.json". */
     public const META_DIRECTORY = 'meta/';
 
@@ -38,6 +42,8 @@ class BackupNamespace
     {
         return self::directory().'/'.$namespace->slug.'-'.now()->format('Ymd-His').'.zip';
     }
+
+    public function __construct(private readonly SignImageUrls $signImageUrls) {}
 
     /**
      * Write the namespace and all of its documents (every visibility, so
@@ -91,13 +97,37 @@ class BackupNamespace
             ->orderBy('path')
             ->get();
 
+        $imagePaths = [];
+
         foreach ($documents as $document) {
             $this->addDocument($zip, $document, $withSnapshots, $withRevisions);
+
+            $imagePaths = [
+                ...$imagePaths,
+                ...$this->signImageUrls->paths($document->content),
+                ...$this->signImageUrls->paths((string) $document->source_content),
+            ];
         }
+
+        $this->addImages($zip, array_unique($imagePaths));
 
         $zip->close();
 
         return $documents->count();
+    }
+
+    /**
+     * @param  array<int, string>  $paths
+     */
+    private function addImages(ZipArchive $zip, array $paths): void
+    {
+        $disk = Storage::disk('public');
+
+        foreach ($paths as $path) {
+            if ($disk->exists($path)) {
+                $zip->addFromString(self::IMAGES_DIRECTORY.$path, $disk->get($path));
+            }
+        }
     }
 
     private function addDocument(ZipArchive $zip, Document $document, bool $withSnapshots, bool $withRevisions): void

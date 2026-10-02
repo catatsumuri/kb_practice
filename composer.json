@@ -17,6 +17,7 @@
         "aws/aws-sdk-php": "^3.369.1",
         "erag/laravel-lang-sync-inertia": "^2.2",
         "inertiajs/inertia-laravel": "^3.0",
+        "intervention/image": "^3.0",
         "laravel-lang/common": "^6.8",
         "laravel/ai": "^1.0",
         "laravel/chisel": "^0.1.0",

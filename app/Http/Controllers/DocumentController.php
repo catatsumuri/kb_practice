@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CheckDocumentSource;
 use App\Actions\FetchSourceContent;
+use App\Actions\SignImageUrls;
 use App\Actions\TranslateDocument;
 use App\Enums\DocumentType;
 use App\Enums\DocumentVisibility;
@@ -206,8 +207,13 @@ class DocumentController extends Controller
      */
     private function renderShow(Request $request, Document $document): Response
     {
+        $display = $this->forDisplay($request, $document);
+
+        // Only the displayed copy is signed; it is never saved.
+        $display['document']->content = app(SignImageUrls::class)($document->content);
+
         return Inertia::render('documents/show', [
-            ...$this->forDisplay($request, $document),
+            ...$display,
             'can' => [
                 'update' => Gate::allows('update', $document),
                 'delete' => Gate::allows('delete', $document),

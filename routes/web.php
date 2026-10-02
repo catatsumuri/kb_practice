@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\DocumentNamespaceController;
+use App\Http\Controllers\ImageController;
 use App\Http\Controllers\NamespaceBackupController;
 use App\Http\Controllers\OgpController;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +62,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // wildcard second segment — so the literal "create" segment can
     // never be swallowed by {path}. Same pattern as documents/create vs
     // documents/{namespace} below.
+    // Registered before documents.store: "images" would otherwise match
+    // its alpha-constrained {namespace}.
+    Route::post('documents/images', [ImageController::class, 'store'])
+        ->name('documents.images.store');
     Route::get('documents/{namespace}/create', [DocumentController::class, 'create'])
         ->where('namespace', '[a-z][a-z0-9-]*')
         ->name('documents.create');
@@ -73,6 +78,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except(['create', 'store', 'show']);
     Route::resource('namespaces', DocumentNamespaceController::class)->only(['create', 'store', 'edit', 'update']);
 });
+
+// Image URLs are stored unsigned in Markdown and signed when a document is
+// displayed, so the signature alone authorizes viewing.
+Route::get('images/{path}', [ImageController::class, 'show'])
+    ->where('path', '.+')
+    ->middleware('signed:relative')
+    ->name('images.show');
 
 // Public namespaces/documents are viewable by guests. Registered after the
 // auth group's documents/{namespace}/create so that literal segment still
