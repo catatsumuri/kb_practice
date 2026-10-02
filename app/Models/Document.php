@@ -114,13 +114,14 @@ class Document extends Model
     }
 
     /**
-     * Whether this is a translation whose content is still the untouched
-     * source text, i.e. it has not been translated yet.
+     * Whether this is a translation whose content is still empty or the
+     * untouched source text, i.e. it has not been translated yet.
      */
     public function isUntranslated(): bool
     {
         return filled($this->source_content)
-            && in_array($this->content, [$this->source_content, $this->translationSource()], true);
+            && (blank($this->content)
+                || in_array($this->content, [$this->source_content, $this->translationSource()], true));
     }
 
     /**

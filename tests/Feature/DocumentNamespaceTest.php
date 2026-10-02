@@ -528,7 +528,7 @@ test('所有者以外はソースの更新確認を実行できない', function
     Http::assertNothingSent();
 });
 
-test('原文のままの翻訳記事は未翻訳として一覧に渡され、本文は渡されない', function () {
+test('原文のまま、または本文が空の翻訳記事は未翻訳として一覧に渡され、本文は渡されない', function () {
     $namespace = DocumentNamespace::factory()->create();
     Document::factory()->for($namespace->owner)->create([
         'document_namespace_id' => $namespace->id,
@@ -544,6 +544,13 @@ test('原文のままの翻訳記事は未翻訳として一覧に渡され、�
         'source_url' => 'https://example.com/b.md',
         'source_content' => "# Intro\n\nHello",
     ]);
+    Document::factory()->for($namespace->owner)->create([
+        'document_namespace_id' => $namespace->id,
+        'path' => 'empty',
+        'content' => '',
+        'source_url' => 'https://example.com/c.md',
+        'source_content' => "# Intro\n\nHello",
+    ]);
 
     $this->actingAs($namespace->owner)
         ->get(route('namespaces.show', $namespace))
@@ -552,5 +559,6 @@ test('原文のままの翻訳記事は未翻訳として一覧に渡され、�
             ->where('documents', fn ($documents) => collect($documents)->pluck('is_untranslated', 'path')->all() == [
                 'untranslated' => true,
                 'translated' => false,
+                'empty' => true,
             ] && collect($documents)->every(fn ($document) => ! isset($document['content'], $document['source_content']))));
 });
