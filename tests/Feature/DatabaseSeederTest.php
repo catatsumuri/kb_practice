@@ -17,11 +17,16 @@ afterEach(function () {
     File::deleteDirectory($this->storagePath);
 });
 
-test('the seeder creates two test users and no namespace when no backups are present', function () {
+test('the seeder creates two test users and only the empty laravel-ai namespace when no backups are present', function () {
     $this->seed(DatabaseSeeder::class);
 
     expect(User::orderBy('id')->pluck('email')->all())->toBe(['test@example.com', 'test2@example.com'])
-        ->and(DocumentNamespace::count())->toBe(0);
+        ->and(DocumentNamespace::pluck('slug')->all())->toBe(['laravel-ai']);
+    $namespace = DocumentNamespace::where('slug', 'laravel-ai')->sole();
+    expect($namespace->name)->toBe('Laravel AI')
+        ->and($namespace->is_public)->toBeTrue()
+        ->and($namespace->owner->email)->toBe('test@example.com')
+        ->and($namespace->documents()->count())->toBe(0);
 });
 
 test('the seeder restores the typesafe namespace from its backup, owned by the first test user', function () {
@@ -119,7 +124,7 @@ test('the seeder restores only the latest archive for every namespace regardless
 
     $this->seed(DatabaseSeeder::class);
 
-    expect(DocumentNamespace::orderBy('slug')->pluck('slug')->all())->toBe(['manual', 'notes']);
+    expect(DocumentNamespace::orderBy('slug')->pluck('slug')->all())->toBe(['laravel-ai', 'manual', 'notes']);
     $restored = DocumentNamespace::where('slug', 'manual')->firstOrFail()->documents()->sole();
     expect($restored->title)->toBe('Translated title')
         ->and($restored->content)->toBe('Translated content')
@@ -140,6 +145,19 @@ test('the seeder ignores broken archives and unsupported backup formats', functi
 
     $this->seed(DatabaseSeeder::class);
 
-    expect(DocumentNamespace::count())->toBe(0)
+    expect(DocumentNamespace::pluck('slug')->all())->toBe(['laravel-ai'])
         ->and(User::whereIn('email', ['test@example.com', 'test2@example.com'])->count())->toBe(2);
+});
+
+test('the seeder keeps a restored laravel-ai backup instead of creating an empty namespace', function () {
+    $source = DocumentNamespace::factory()->create(['slug' => 'laravel-ai', 'name' => 'Laravel AI (backup)']);
+    Document::factory()->for($source->owner)->create(['document_namespace_id' => $source->id, 'path' => 'intro']);
+    app(BackupNamespace::class)($source, BackupNamespace::directory().'/laravel-ai.zip');
+    $source->owner->delete();
+
+    $this->seed(DatabaseSeeder::class);
+
+    $namespace = DocumentNamespace::where('slug', 'laravel-ai')->sole();
+    expect($namespace->name)->toBe('Laravel AI (backup)')
+        ->and($namespace->documents()->count())->toBe(1);
 });

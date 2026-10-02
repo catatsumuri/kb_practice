@@ -6,6 +6,7 @@ use App\Actions\BackupNamespace;
 use App\Actions\ListNamespaceBackups;
 use App\Actions\RestoreNamespace;
 use App\Enums\DocumentVisibility;
+use App\Models\DocumentNamespace;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -31,6 +32,28 @@ class DatabaseSeeder extends Seeder
         ];
 
         $this->restoreNamespaces($users[0]);
+        $this->createEmptyNamespaces($users[0]);
+    }
+
+    /**
+     * Create namespaces that have no backup yet, unless a restored backup
+     * already provided them.
+     */
+    private function createEmptyNamespaces(User $owner): void
+    {
+        $namespaces = ['laravel-ai' => 'Laravel AI'];
+
+        foreach ($namespaces as $slug => $name) {
+            if (DocumentNamespace::where('slug', $slug)->exists()) {
+                continue;
+            }
+
+            $namespace = new DocumentNamespace(['slug' => $slug, 'name' => $name, 'is_public' => true]);
+            $namespace->owner_user_id = $owner->id;
+            $namespace->save();
+
+            $this->command->info('Created empty namespace '.$slug.'.');
+        }
     }
 
     /**
