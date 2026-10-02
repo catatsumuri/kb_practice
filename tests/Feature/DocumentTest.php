@@ -69,6 +69,38 @@ test('作成したドキュメントはログインユーザーに紐づく', fu
         ->and($document->document_namespace_id)->toBe($namespace->id);
 });
 
+test('本文が空でもドキュメントを作成できる', function () {
+    $user = User::factory()->create();
+    $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->post(route('documents.store', $namespace), [
+            'title' => '空のドキュメント',
+            'content' => '',
+            'visibility' => DocumentVisibility::Public->value,
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('namespaces.show', $namespace));
+
+    expect(Document::query()->sole()->content)->toBe('');
+});
+
+test('本文を空にして更新でき、直前の本文はリビジョンに残る', function () {
+    $user = User::factory()->create();
+    $document = Document::factory()->for($user)->create(['title' => '記事', 'content' => '変更前の本文']);
+
+    $this->actingAs($user)
+        ->put(route('documents.update', $document), [
+            'title' => '記事',
+            'content' => '',
+            'visibility' => $document->visibility->value,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($document->fresh()->content)->toBe('')
+        ->and($document->revisions()->sole()->content)->toBe('変更前の本文');
+});
+
 test('記事作成時にスラッグを指定するとそのパスで表示できる', function () {
     $user = User::factory()->create();
     $namespace = DocumentNamespace::factory()->create(['owner_user_id' => $user->id]);

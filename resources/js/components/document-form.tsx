@@ -598,7 +598,6 @@ export function DocumentForm({
                                         onDrop={handleContentDrop}
                                         onPaste={handleContentPaste}
                                         className="min-h-80 resize-y font-mono leading-6"
-                                        required
                                     />
                                     {showSourcePreview && sourceContent && (
                                         <Textarea

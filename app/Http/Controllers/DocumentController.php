@@ -67,7 +67,7 @@ class DocumentController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string'],
+            'content' => ['nullable', 'string'],
             'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
             'path' => [
                 'nullable',
@@ -94,6 +94,7 @@ class DocumentController extends Controller
             'path.unique' => 'このスラッグは既に使用されています。',
         ]);
 
+        $validated['content'] ??= '';
         $validated['document_type'] = filled($validated['source_url'] ?? null)
             ? DocumentType::Translation
             : DocumentType::Original;
@@ -338,9 +339,10 @@ class DocumentController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string'],
+            'content' => ['nullable', 'string'],
             'visibility' => ['required', Rule::enum(DocumentVisibility::class)],
         ]);
+        $validated['content'] ??= '';
 
         if ($document->title !== $validated['title'] || $document->content !== $validated['content']) {
             $this->recordRevision($document, $request->user()->id);
