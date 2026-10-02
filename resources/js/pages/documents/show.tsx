@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { DocumentMeta } from '@/components/document-meta';
+import { DocumentTableOfContents } from '@/components/document-table-of-contents';
 import { markdownTabComponents } from '@/components/markdown-tabs';
 import { NamespaceNavigation } from '@/components/namespace-navigation';
 import { usePersistedBoolean } from '@/hooks/use-persisted-boolean';
@@ -616,42 +617,13 @@ export default function ShowDocument({
                                         </div>
 
                                         {headings.length > 0 && (
-                                            <nav className="rounded-md border p-4 text-sm">
-                                                <p className="mb-2 font-semibold text-foreground">
-                                                    {__('Contents')}
-                                                </p>
-                                                <ul className="space-y-1">
-                                                    {headings.map((heading) => (
-                                                        <li
-                                                            key={heading.id}
-                                                            style={{
-                                                                paddingLeft: `${(heading.level - 1) * 12}px`,
-                                                            }}
-                                                        >
-                                                            <a
-                                                                href={`#${encodeURIComponent(heading.id)}`}
-                                                                onClick={(
-                                                                    event,
-                                                                ) => {
-                                                                    event.preventDefault();
-                                                                    window.document
-                                                                        .getElementById(
-                                                                            heading.id,
-                                                                        )
-                                                                        ?.scrollIntoView(
-                                                                            {
-                                                                                block: 'start',
-                                                                            },
-                                                                        );
-                                                                }}
-                                                                className="block rounded px-1 py-0.5 text-muted-foreground hover:text-foreground"
-                                                            >
-                                                                {heading.text}
-                                                            </a>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </nav>
+                                            <DocumentTableOfContents
+                                                headings={headings}
+                                                contentPaneRef={contentPaneRef}
+                                                scrollContainerRef={
+                                                    rightPanelRef
+                                                }
+                                            />
                                         )}
                                     </div>
                                 </aside>
